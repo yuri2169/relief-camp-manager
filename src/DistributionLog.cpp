@@ -1,16 +1,14 @@
 #include "DistributionLog.h"
 #include "Exceptions.h"
+#include <cstddef>
 #include <stdexcept>
 
 DistributionLog::DistributionLog() {}
 
 bool DistributionLog::alreadyClaimed(int familyId, const Date& date) const {
-    // The camp and amount in the probe are placeholders: the comparison below
-    // only looks at family and date.
-    Allocation probe(familyId, 0, date, Ration());
     for (std::size_t i = 0; i < entries.size(); ++i) {
-        // [Operator overloading in use] the rule lives in Allocation::operator==
-        if (entries[i] == probe) return true;
+        // The rule: one claim per family per date, in any camp (camp is ignored).
+        if (entries[i].getFamilyId() == familyId && entries[i].getDate() == date) return true;
     }
     return false;
 }

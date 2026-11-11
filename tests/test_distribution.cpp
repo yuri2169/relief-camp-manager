@@ -60,6 +60,8 @@ void run_distribution_tests() {
     // Queries by camp and day.
     std::vector<Allocation> camp1Day1 = log.forCamp(1, day1);
     ASSERT_EQ(static_cast<int>(camp1Day1.size()), 2);       // families 101 and 102
+    ASSERT_EQ(camp1Day1[0].getFamilyId(), 101);
+    ASSERT_EQ(camp1Day1[1].getFamilyId(), 102);
     ASSERT_EQ(log.familiesServed(1, day1), 2);
     ASSERT_EQ(log.familiesServed(2, day1), 1);
     ASSERT_EQ(log.familiesServed(9, day1), 0);
@@ -74,6 +76,8 @@ void run_distribution_tests() {
     // A family's whole history, across camps and days.
     std::vector<Allocation> history = log.forFamily(101);
     ASSERT_EQ(static_cast<int>(history.size()), 2);
+    ASSERT_TRUE(history[0].getDate() == day1);
+    ASSERT_TRUE(history[1].getDate() == day2);
 
     // at() is positional and range-checked.
     ASSERT_EQ(log.at(0).getFamilyId(), 101);
@@ -90,6 +94,13 @@ void run_distribution_tests() {
     // ...but a NEW claim after loading is still checked.
     ASSERT_THROWS(loaded.record(Allocation(101, 1, day1, oneAdult)), DuplicateClaimException);
     ASSERT_EQ(loaded.size(), 2);
+
+    // Allocation::operator== is "the same claim": family and date only.
+    Allocation base(101, 1, day1, oneAdult);
+    // [Operator overloading in use] the rule lives in Allocation::operator==
+    ASSERT_TRUE(base == Allocation(101, 2, day1, oneAdult * 7.0));  // camp, amount differ
+    ASSERT_FALSE(base == Allocation(102, 1, day1, oneAdult));       // other family
+    ASSERT_FALSE(base == Allocation(101, 1, day2, oneAdult));       // other date
 
     log.clear();
     ASSERT_EQ(log.size(), 0);
