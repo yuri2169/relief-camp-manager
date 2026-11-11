@@ -29,8 +29,9 @@ void run_seed_tests() {
     testing::beginSuite("Seeded Morigaon dataset");
 
     CsvStore store("data");
+    // The dataset is a committed deliverable: a missing data/ must fail loudly.
+    ASSERT_TRUE(store.dataExists());
     if (!store.dataExists()) {
-        std::cout << "  skip  data/ not seeded yet - run `make seed`\n";
         return;
     }
 
@@ -165,7 +166,7 @@ void run_seed_tests() {
 
     // Demo step 5: camp 2's rice is about 2 days and is its worst item.
     double rice2 = c2->getStock().daysOfSupplyFor(Item::Rice);
-    ASSERT_TRUE(rice2 >= 1.5 && rice2 <= 3.0);
+    ASSERT_TRUE(rice2 >= 1.9 && rice2 <= 2.1);
     ASSERT_TRUE(c2->getStock().mostCriticalItem() == Item::Rice);
     // Everything else at camp 2 is comfortably above the critical line.
     Item others[5] = {Item::Dal, Item::Oil, Item::Salt, Item::ORS, Item::BabyFood};
@@ -178,7 +179,7 @@ void run_seed_tests() {
 
     // Camp 3 is the donor, around 18 days of rice.
     double rice3 = c3->getStock().daysOfSupplyFor(Item::Rice);
-    ASSERT_TRUE(rice3 >= 16.0 && rice3 <= 20.0);
+    ASSERT_TRUE(rice3 >= 17.5 && rice3 <= 18.5);
 
     // The advisor finds camp 3 -> camp 2 for rice.
     std::vector<Camp*> all;

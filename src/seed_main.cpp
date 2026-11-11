@@ -31,9 +31,9 @@
 //    second family, and always when the family needs one (see below).
 //  - Every third family has an infant. The brief leaves family 9 (a lactating
 //    mother) without one, so a lactating family is FORCED to have an infant.
-//  - Every second family has one child; only every tenth family (even AND
-//    divisible by five) has a second child, so "every second family has one or
-//    two children" holds.
+//  - Every second family (i even) has one child; only the families with i
+//    divisible by ten (family numbers 1, 11, 21, 31) have a second child, so
+//    "every second family has one or two children" holds.
 //  - Every fourth family has an elderly member.
 //  - Pregnant (4, 11, 19, 27, 35) and lactating (9, 22) flags land on a SECOND
 //    adult, who is female. That second adult is forced to exist for those
@@ -55,6 +55,13 @@
 
 static const int FAMILY_COUNT = 40;
 
+// Camp 2 is filled by its own 14 families (family numbers 17-30, zero-based
+// 16-29). Each gets 3 extra children and the first 6 of them get a fourth,
+// so the camp holds 88 of 90 and no registered family fits in what is left.
+static const int CAMP2_FIRST_INDEX = 16;
+static const int CAMP2_BASE_EXTRA_CHILDREN = 3;
+static const int CAMP2_FAMILIES_WITH_ONE_MORE = 6;
+
 // Heads of household. HEAD_SEX says whether each name is male (M) or female (F).
 static const char* HEAD_NAMES[FAMILY_COUNT] = {
     "Bipul Das",        "Jiten Saikia",     "Rupa Nath",        "Hemanta Bora",
@@ -75,11 +82,24 @@ static const char* VILLAGES[8] = {
     "Dharamtul", "Moirabari", "Bhurbandha"
 };
 
-// First names for the other members of a household.
+// First names for the other members of a household. Each name is stored with
+// its sex, so a name and a sex can never disagree.
+struct NamedPerson {
+    const char* name;
+    char sex;
+};
+static const NamedPerson INFANTS[4] = {
+    {"Aarav", 'M'}, {"Ankita", 'F'}, {"Dev", 'M'}, {"Sneha", 'F'}
+};
+// Twelve children. A family takes consecutive entries (wrapping), and no
+// family has more than twelve, so no two children in a family share a name.
+static const NamedPerson CHILDREN[12] = {
+    {"Jintu", 'M'},   {"Rimjim", 'F'},   {"Dipjyoti", 'M'}, {"Mamoni", 'F'},
+    {"Kaushik", 'M'}, {"Priyanka", 'F'}, {"Bikash", 'M'},   {"Riya", 'F'},
+    {"Himangshu", 'M'}, {"Juri", 'F'},   {"Rajib", 'M'},    {"Nandita", 'F'}
+};
 static const char* WIFE_NAMES[8]    = {"Moina", "Jonaki", "Pori", "Bhanu", "Ranju", "Lipika", "Dolly", "Nayana"};
 static const char* HUSBAND_NAMES[8] = {"Mukul", "Dilip", "Naren", "Pankaj", "Robin", "Sanjib", "Tapan", "Bhupen"};
-static const char* CHILD_NAMES[8]   = {"Rimjim", "Jintu", "Dipjyoti", "Mamoni", "Kaushik", "Priyanka", "Bikash", "Riya"};
-static const char* INFANT_NAMES[4]  = {"Aarav", "Ankita", "Dev", "Sneha"};
 
 // The outside volunteers, one per partner organisation.
 struct VolunteerRow {
@@ -164,26 +184,37 @@ static std::unique_ptr<Family> buildFamily(int i, int campId, int extraChildren)
         }
     }
 
+    // Children take the next names from the table, starting at a different
+    // place in each family.
+    int childSlot = i;
+
     // Every third family has an infant; a lactating mother always does.
     if (i % 3 == 0 || isLactating) {
-        std::string name = std::string(INFANT_NAMES[i % 4]) + " " + surname;
-        f->addMember(new Infant(name, i % 2, (i % 2 == 0) ? 'M' : 'F', fid, campId));
+        const NamedPerson& baby = INFANTS[i % 4];
+        std::string name = std::string(baby.name) + " " + surname;
+        f->addMember(new Infant(name, i % 2, baby.sex, fid, campId));
     }
 
     // Every second family has one child, and every tenth a second one.
     if (i % 2 == 0) {
-        std::string name = std::string(CHILD_NAMES[i % 8]) + " " + surname;
-        f->addMember(new Child(name, 5 + (i % 7), (i % 4 == 0) ? 'M' : 'F', fid, campId));
+        const NamedPerson& kid = CHILDREN[childSlot % 12];
+        childSlot++;
+        std::string name = std::string(kid.name) + " " + surname;
+        f->addMember(new Child(name, 5 + (i % 7), kid.sex, fid, campId));
         if (i % 5 == 0) {
-            std::string name2 = std::string(CHILD_NAMES[(i + 3) % 8]) + " " + surname;
-            f->addMember(new Child(name2, 3 + (i % 5), 'F', fid, campId));
+            const NamedPerson& kid2 = CHILDREN[childSlot % 12];
+            childSlot++;
+            std::string name2 = std::string(kid2.name) + " " + surname;
+            f->addMember(new Child(name2, 3 + (i % 5), kid2.sex, fid, campId));
         }
     }
 
     // Extra children, used only to make camp 2's families a realistic size.
     for (int k = 0; k < extraChildren; k++) {
-        std::string name = std::string(CHILD_NAMES[(i + 2 * k + 1) % 8]) + " " + surname;
-        f->addMember(new Child(name, 3 + (i + k) % 10, (k % 2 == 0) ? 'F' : 'M', fid, campId));
+        const NamedPerson& kid = CHILDREN[childSlot % 12];
+        childSlot++;
+        std::string name = std::string(kid.name) + " " + surname;
+        f->addMember(new Child(name, 3 + (i + k) % 10, kid.sex, fid, campId));
     }
 
     // Every fourth family has an elderly member.
@@ -270,7 +301,14 @@ int main(int argc, char** argv) {
             } else if (i >= 16) {
                 camp = camp2;
             }
-            std::unique_ptr<Family> f = buildFamily(i, camp->getId(), camp->getId() == 2 ? 3 + (i - 16 < 6 ? 1 : 0) : 0);
+            int extraChildren = 0;
+            if (camp == camp2) {
+                extraChildren = CAMP2_BASE_EXTRA_CHILDREN;
+                if (i - CAMP2_FIRST_INDEX < CAMP2_FAMILIES_WITH_ONE_MORE) {
+                    extraChildren++;
+                }
+            }
+            std::unique_ptr<Family> f = buildFamily(i, camp->getId(), extraChildren);
             placeFamily(*camp, *f);
             families.add(std::move(f));
         }
