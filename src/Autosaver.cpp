@@ -3,10 +3,14 @@
 #include <chrono>
 
 Autosaver::Autosaver()
-    : dataMutex(0), running(false), saveCount(0), failureCount(0), intervalSeconds(30) {}
+    : dataMutex(nullptr), running(false), saveCount(0), failureCount(0), intervalSeconds(30) {}
 
 Autosaver::~Autosaver() {
-    stop();        // never leave a running thread behind
+    try {
+        stop();    // never leave a running thread behind
+    } catch (...) {
+        // a destructor must not throw
+    }
 }
 
 void Autosaver::start(int seconds, std::mutex& mutexToShare, std::function<void()> fn) {
@@ -15,7 +19,12 @@ void Autosaver::start(int seconds, std::mutex& mutexToShare, std::function<void(
     dataMutex = &mutexToShare;
     saveFn = fn;
     running = true;
-    worker = std::thread(&Autosaver::loop, this);
+    try {
+        worker = std::thread(&Autosaver::loop, this);
+    } catch (...) {
+        running = false;          // no thread was started, so do not claim one
+        throw;
+    }
 }
 
 void Autosaver::loop() {

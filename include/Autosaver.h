@@ -7,7 +7,7 @@
 #include <atomic>
 #include <functional>
 
-// [Multithreading] Saves the data to disk every few seconds on a background
+// Saves the data to disk every few seconds on a background
 // thread, so an unannounced power cut - routine in a flood-hit district -
 // costs at most one interval of work instead of the whole day's register.
 //
@@ -17,7 +17,14 @@
 //  * stop() signals a condition_variable instead of letting the thread sleep
 //    out its interval, so quitting the app is immediate rather than taking up
 //    to N seconds.
+//
+// Rules for callers:
+//  * start(), stop() and the destructor are single-threaded entry points: call
+//    them from one thread only, and never from the worker thread itself.
+//  * call stop() and saveNow() WITHOUT holding the data mutex, because the
+//    saver takes that mutex itself (std::mutex is not recursive).
 class Autosaver {
+    // [Multithreading]
     std::thread worker;
     // [Mutex]
     std::mutex* dataMutex;            // borrowed from ConsoleApp, not owned
@@ -44,11 +51,13 @@ public:
     Autosaver& operator=(const Autosaver& other) = delete;
 
     void start(int intervalSeconds, std::mutex& dataMutex, std::function<void()> saveFn);
+    // Call without holding the data mutex: the saver may be waiting for it.
     void stop();
     bool isRunning() const;
-    int getSaveCount() const;
+    int getSaveCount() const;         // save ATTEMPTS, including ones that threw
     int getFailureCount() const;      // lets ConsoleApp tell the operator a save failed
-    void saveNow();                   // runs the save on the calling thread
+    // Runs the save on the calling thread. Call without holding the data mutex.
+    void saveNow();
 };
 
 #endif

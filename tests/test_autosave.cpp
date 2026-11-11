@@ -53,13 +53,17 @@ void run_autosave_tests() {
         Autosaver saver;
 
         saver.start(1, dataMutex, [&]() {
-            // If the saver did not already hold dataMutex, try_lock would
-            // succeed here, which would mean saves can race the menu.
-            if (!dataMutex.try_lock()) {
-                sawLock = true;
-            } else {
-                dataMutex.unlock();
-            }
+            // A DIFFERENT thread tries the lock: asking from the saving thread
+            // itself would be undefined behaviour. If the saver did not hold
+            // dataMutex, this try_lock would succeed and saves could race the menu.
+            std::thread probe([&]() {
+                if (!dataMutex.try_lock()) {
+                    sawLock = true;
+                } else {
+                    dataMutex.unlock();
+                }
+            });
+            probe.join();
             saves++;
         });
 
@@ -124,5 +128,21 @@ void run_autosave_tests() {
         ASSERT_TRUE(saver.isRunning());
         saver.stop();
         ASSERT_TRUE(saver.getFailureCount() >= 2);    // and it counted the failures
+    }
+
+    // --- a second start() while running is ignored; a zero interval is clamped to 1 s ---
+    {
+        std::mutex dataMutex;
+        std::atomic<int> first(0);
+        std::atomic<int> second(0);
+        Autosaver saver;
+        saver.start(0, dataMutex, [&first]() { first++; });
+        saver.start(1, dataMutex, [&second]() { second++; });
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+        saver.stop();
+        ASSERT_TRUE(first.load() >= 1);
+        ASSERT_TRUE(first.load() <= 2);               // clamped to 1 s, not a busy loop
+        ASSERT_EQ(second.load(), 0);                  // the second start was a no-op
+        ASSERT_EQ(saver.getFailureCount(), 0);        // every save succeeded
     }
 }
