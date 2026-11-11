@@ -59,9 +59,9 @@ public:
     // and all():
     //  - The registry owns each element through its std::unique_ptr.
     //  - A returned T* is a non-owning observer: use it, but NEVER delete it.
-    //  - It is invalidated by remove() and clear() (the element is destroyed),
-    //    and by anything else that reallocates the internal vector. Do not keep
-    //    it across those calls.
+    //  - remove() and clear() destroy the element, so they invalidate a returned
+    //    pointer and leave any all() snapshot stale. (Growing the vector does
+    //    not: it moves the unique_ptr slots, not the objects they own.)
     T* at(int index) const {
         if (index < 0 || index >= static_cast<int>(items.size())) {
             return 0;

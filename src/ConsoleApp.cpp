@@ -27,7 +27,7 @@ namespace {
 const int kAutosaveSeconds = 30;
 
 // Days of supply at or below this is flagged LOW STOCK.
-const double kLowStockDays = 3.0;
+const double kLowStockDays = 3.0;  // same 3.0 as kLowDays (ReportGenerator.cpp) and TransferAdvisor criticalDays
 
 // The menu shows numbered choices but FamilySorter::metricByName takes names.
 const char* const kMetricNames[] = { "vulnerability", "size", "age", "infants" };

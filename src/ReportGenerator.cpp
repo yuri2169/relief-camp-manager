@@ -12,7 +12,7 @@
 namespace {
 
 // An item with this many days of supply or fewer is flagged LOW.
-const double kLowDays = 3.0;
+const double kLowDays = 3.0;  // same 3.0 as kLowStockDays (ConsoleApp.cpp) and TransferAdvisor criticalDays
 
 // Wraps a CSV value in quotes when it contains a comma or a quote, so every
 // row keeps exactly three fields.

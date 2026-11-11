@@ -17,7 +17,6 @@
 #include <set>
 #include <utility>
 #include <cstdio>
-#include <utility>
 
 // ------------------------------------------------------------ file names
 static const std::string kCampsFile = "camps.csv";

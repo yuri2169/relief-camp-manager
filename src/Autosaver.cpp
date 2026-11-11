@@ -13,11 +13,11 @@ Autosaver::~Autosaver() {
     }
 }
 
-void Autosaver::start(int seconds, std::mutex& mutexToShare, std::function<void()> fn) {
+void Autosaver::start(int intervalSeconds, std::mutex& dataMutex, std::function<void()> saveFn) {
     if (running.load()) { return; }
-    intervalSeconds = seconds > 0 ? seconds : 1;
-    dataMutex = &mutexToShare;
-    saveFn = fn;
+    this->intervalSeconds = intervalSeconds > 0 ? intervalSeconds : 1;  // parameters share the members' names
+    this->dataMutex = &dataMutex;
+    this->saveFn = saveFn;
     running = true;
     try {
         worker = std::thread(&Autosaver::loop, this);

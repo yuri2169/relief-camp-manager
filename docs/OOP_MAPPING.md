@@ -42,9 +42,9 @@ other operators (`+`, `-`, `<`, `==`, `<<` all do real work).
 | # | Syllabus row | Where | What to look at |
 |---|---|---|---|
 | 1 | Classes, objects, constructors (default, parameterised, copy), destructors | `include/Person.h:28-31`; `include/Family.h:41-49`; `src/Family.cpp:23-56`; `include/Ration.h:15`; `include/Debug.h:7`; `src/Person.cpp:33` | `Person` and `Family` show all three constructor forms. `Family`'s destructor frees its members. `make debug` prints `[lifecycle] ... created / copied / destroyed` lines (`src/Family.cpp:53`, `src/Person.cpp:33`). `Person`'s destructor is virtual (`include/Person.h:31`). |
-| 2 | Constant objects and const member functions | `include/Person.h:39`; `include/Date.h:19`; `include/Ration.h:19`; `include/Registry.h:36`; `include/ReportGenerator.h:21` | Every getter is `const`. Every `ReportGenerator` parameter is a `const` reference, so a report cannot change a camp. |
+| 2 | Constant objects and const member functions | `include/Person.h:39`; `include/Date.h:19`; `include/Ration.h:19`; `include/Registry.h:36`; `include/ReportGenerator.h:21`; const object instance: `src/seed_main.cpp:331` | Every getter is `const`. Every `ReportGenerator` parameter is a `const` reference, so a report cannot change a camp. `const Ration demand = ...` at `src/seed_main.cpp:331` is a genuine const object. |
 | 3 | Static data members and static member functions | `include/Person.h:11,33`; `src/Person.cpp:4`; `include/Camp.h:37,57`; `include/Family.h:24,52`; `include/Stock.h:17`; `include/RationNorms.h:11,20`; `include/HealthMonitor.h:34,52`; `include/Csv.h:12` | Auto-increment ID generators (`Camp::generateId`, `src/Camp.cpp:75`) and the ration-norm table, which is genuinely one shared table. Definitions of the statics sit in one `.cpp` each. |
-| 4 | Friend function and friend class | Class: `include/Camp.h:93`, used at `src/ReportGenerator.cpp:50,100`. Functions: `include/Person.h:59`; `include/Allocation.h:30`; `include/Date.h:33`; `include/Family.h:88`; `include/Ration.h:31` | `friend class ReportGenerator;` lets the report read `Camp`'s private shelters, occupancy and stock. `operator<<` and the binary operators are friend free functions. |
+| 4 | Friend function and friend class | Class: `include/Camp.h:93` (tag), `include/Camp.h:96` (the `friend class ReportGenerator;` declaration), used at `src/ReportGenerator.cpp:50,100`. Functions: `include/Person.h:59`; `include/Allocation.h:30`; `include/Date.h:33`; `include/Family.h:88`; `include/Ration.h:31` | `friend class ReportGenerator;` lets the report read `Camp`'s private shelters, occupancy and stock. `operator<<` and the binary operators are friend free functions. |
 | 5 | Objects as arguments and returning objects | Arguments: `include/Camp.h:70`; `include/Stock.h:44`; `include/TransferAdvisor.h:60`; `src/TransferAdvisor.cpp:78`. Returning: `include/Date.h:26`; `include/Family.h:72`; `src/Adult.cpp:29`; `include/TransferAdvisor.h:60` | `Camp::admit(const Family&)`, `Family::dailyRation() -> Ration`, `Date::plusDays`, the transfer suggestion returned by value. |
 | 6 | Nested class | `include/Camp.h:16-18` | `Camp::Shelter`. A shelter has no meaning outside the camp that contains it. |
 | 7 | Dynamic memory and dynamic objects, arrays of objects | `include/Family.h:17-18`; `src/Family.cpp:59,62,85,86`; `src/Family.cpp:65` | `Family` holds `Person**`, grown with `new Person*[]` and filled with `clone()`d members, with a hand-written copy constructor (`src/Family.cpp:26`), copy assignment (`:35`) and destructor (`:51`). Smart-pointer counterpart: `include/Registry.h:18`. **Pedagogical, see above.** |
@@ -53,11 +53,11 @@ other operators (`+`, `-`, `<`, `==`, `<<` all do real work).
 | 10 | Type conversion: class to basic, basic to class, class to class | Class to basic: `include/Stock.h:36`, `src/Stock.cpp:67`. Basic to class: `include/Ration.h:12-13`. Class to class: `include/Family.h:83`, `src/Family.cpp:189`; `include/Allocation.h:26`, `src/Allocation.cpp:19` | `int -> Ration` is non-explicit on purpose. `Family -> RationCard` is the card an official hands over. `Allocation -> Ration` is what makes `stock - allocation` compile. `Stock -> double` is **pedagogical, see above.** |
 | 11 | Inheritance: single, multilevel, hierarchical, multiple, hybrid | Single: `include/Adult.h:6`, `include/Child.h:6`, `include/Infant.h:6`. Hierarchical: `include/Adult.h:8`, `include/Child.h:8`, `include/Infant.h:8`. Multilevel: `include/Elderly.h:8`. Multiple: `include/ResidentVolunteer.h:10`. Hybrid: `include/ResidentVolunteer.h:12` | `Person -> Resident -> {Infant, Child, Adult}`; `Adult -> Elderly` (four levels); `ResidentVolunteer : Adult, Volunteer`. The tree as a whole is hybrid. |
 | 12 | Virtual base class | `include/Resident.h:10,14`; `include/Volunteer.h:10,12`; `src/ResidentVolunteer.cpp:5,18`; `src/Adult.cpp:10`; `src/Child.cpp:10`; `src/Infant.cpp:10`; `src/Resident.cpp:9`; `src/Volunteer.cpp:10`; `src/ResidentVolunteer.cpp:35` | `class Resident : virtual public Person` and `class Volunteer : virtual public Person` give a `ResidentVolunteer` one `Person`, not two. The most-derived constructor initialises the virtual base. `[Ambiguity resolution]` (`src/ResidentVolunteer.cpp:35`) picks `Adult::rationNeed` where both bases supply one. Compiler evidence below. |
-| 13 | Abstract class, pure virtual functions, runtime polymorphism | Abstract: `include/Person.h:8`. Pure virtual: `include/Person.h:52-57`. Overrides: `include/Adult.h:17`, `include/Child.h:16`, `include/Infant.h:16`; `include/Volunteer.h:29`. Dispatch: `include/Family.h:70`, `src/Family.cpp:148`; `include/CsvStore.h:94`, `src/CsvStore.cpp:196` | `Family::dailyRation` walks `Person*` and each member answers with its own `rationNeed()`. `CsvStore::makePerson` turns a CSV type tag back into the right concrete subclass, the one place that knows every subclass. |
+| 13 | Abstract class, pure virtual functions, runtime polymorphism | Abstract: `include/Person.h:8`. Pure virtual: `include/Person.h:52-57`. Overrides: `include/Adult.h:17`, `include/Child.h:16`, `include/Infant.h:16`; `include/Volunteer.h:29`. Dispatch: `include/Family.h:70`, `src/Family.cpp:148`; `include/CsvStore.h:94`, `src/CsvStore.cpp:195` | `Family::dailyRation` walks `Person*` and each member answers with its own `rationNeed()`. `CsvStore::makePerson` turns a CSV type tag back into the right concrete subclass, the one place that knows every subclass. |
 | 14 | Templates (class and function) | Class: `include/Registry.h:7,16-17`. Function: `include/Algorithms.h:6,12-13`, used at `src/ConsoleApp.cpp:592` | `Registry<T>` stores, finds by ID and removes (camps, families, volunteers) and owns its elements through `unique_ptr`. `findMax` takes a member-function pointer. |
 | 15 | Exception handling with custom exception classes | Base: `include/Exceptions.h:9,12`. Derived: `include/Exceptions.h:20,33,45,56` (classes at `:22,34,47,58`). Handlers: `src/ConsoleApp.cpp:692` (main), `src/ConsoleApp.cpp:428` (admit) | `ReliefException` is the base of `OverCapacityException`, `InsufficientStockException`, `DuplicateClaimException` and `FileFormatException`. The main loop catches the precise types first (`src/ConsoleApp.cpp:695-713`). Two `[Exception handling]` tags exist: the main loop, and `handleAdmit`, which catches the full-camp case locally so it can offer another camp. |
-| 16 | File handling | `include/CsvStore.h:43`; `src/CsvStore.cpp:52-92,391,726`; `include/Csv.h:12` | One CSV per record kind, nine files. `saveAll` writes `<name>.tmp` for every file and renames them into place only when all were written, so a failed save leaves the old files intact. `loadAll` throws `FileFormatException` and leaves containers empty rather than half-loaded. Report export lives in `ReportGenerator`. |
-| 17 | Multithreading | `include/Autosaver.h:27` (thread), `:29` (mutex), `:32` (atomic), `:38` (condition variable); `src/Autosaver.cpp:35-36,49,72-73`; `src/ConsoleApp.cpp:655` | A background `std::thread` saves every N seconds under the shared data mutex. The condition variable lets `stop()` wake it at once, then `join()` gives a clean shutdown. The destructor stops and joins even if `stop()` was missed. |
+| 16 | File handling | `include/CsvStore.h:43`; `src/CsvStore.cpp:51-91,390,725`; `include/Csv.h:12` | One CSV per record kind, nine files. `saveAll` writes `<name>.tmp` for every file and renames them into place only when all were written, so a failed save leaves the old files intact. `loadAll` throws `FileFormatException` and leaves containers empty rather than half-loaded. Report export lives in `ReportGenerator`. |
+| 17 | Multithreading | `include/Autosaver.h:27` (thread), `:29` (mutex), `:32` (atomic), `:38` (condition variable); owned mutexes `include/ConsoleApp.h:39` (`dataMutex`) and `include/Autosaver.h:37` (`waitMutex`); `src/Autosaver.cpp:35-36,49,72-73`; `src/ConsoleApp.cpp:655` | A background `std::thread` saves every N seconds under the shared data mutex. The condition variable lets `stop()` wake it at once, then `join()` gives a clean shutdown. The destructor stops and joins even if `stop()` was missed. |
 
 **Coverage result:** all 17 rows have at least one tag in the source. No row is
 unmapped.
@@ -68,7 +68,7 @@ unmapped.
   max-heap written by hand rather than `std::priority_queue`, ordering families
   by vulnerability; it uses `Family::operator<` (`src/DistributionQueue.cpp:6`).
 - `include/Debug.h:7` - the `RELIEF_LIFECYCLE` macro behind `make debug`.
-- Atomic file replacement in `src/CsvStore.cpp:52-92` (temp file, backup and
+- Atomic file replacement in `src/CsvStore.cpp:51-91` (temp file, backup and
   rename) goes past what the syllabus asks.
 
 ## Compiler evidence that these constructs are load-bearing
@@ -102,7 +102,7 @@ build failed with 20 errors, the first being:
 with the same error for `stock`, `id`, `name`, `district`, `occupancy` and
 `capacity`. (The line numbers in that capture are from the code as it was then;
 `ReportGenerator.cpp` and `Camp.h` have changed since, so do not look for them at
-those exact lines. The current friend declaration is `include/Camp.h:93`.)
+those exact lines. The current friend declaration is `include/Camp.h:96`.)
 
 Both experiments were reverted, and the full suite passed afterwards.
 
@@ -115,10 +115,11 @@ two. The per-handler recovery at line 430 sits under the line-428 tag.
 ## Tag index (checked by `sh tools/check_mapping.sh`)
 
 Every tag comment in the source, generated by `sh tools/collect_tags.sh`. The
-check script fails if this list and the source disagree, so citations of tagged
-lines cannot go stale unnoticed. The table also cites a few untagged lines (for
+check script compares each tagged line's file, line number and tag name against
+this list (not the trailing context text), so a tagged line that moves or
+disappears cannot go unnoticed. The table also cites a few untagged lines (for
 example `src/Family.cpp:148`, `src/Camp.cpp:106-127`, `src/Stock.cpp:67`,
-`src/Allocation.cpp:19`, `src/CsvStore.cpp:196`); those are only checked to lie
+`src/Allocation.cpp:19`, `src/CsvStore.cpp:195`); those are only checked to lie
 inside their file, so they could drift. Run both from the repository root.
 
 <!-- tag-index-begin -->
@@ -170,7 +171,7 @@ include/Family.h:49: [Destructor]
 include/Family.h:52: [Static member function]
 include/Family.h:70: [Runtime polymorphism]
 include/Family.h:72: [Returning objects]
-include/Family.h:76: [Pointer to member function] sorting in Task 15.
+include/Family.h:76: [Pointer to member function] sorting through FamilySorter.
 include/Family.h:83: [Class to class conversion] a Family converts to the printable card an
 include/Family.h:88: [Friend functions]
 include/FamilySorter.h:11: [Pointer to member function] Metric points at one of Family's metric

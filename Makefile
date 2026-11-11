@@ -1,7 +1,9 @@
 # Offline Relief Camp Manager - C++17, standard library only.
 CXX      ?= g++
-CXXFLAGS ?= -std=c++17 -Wall -Wextra -pedantic -Iinclude
-LDFLAGS  ?= -pthread
+CXXFLAGS ?=
+CXXFLAGS += -std=c++17 -Wall -Wextra -pedantic -Iinclude
+LDFLAGS  ?=
+LDFLAGS  += -pthread
 
 SRC_DIR   := src
 INC_DIR   := include

@@ -57,7 +57,7 @@ std::ostream& operator<<(std::ostream& os, const TransferSuggestion& t) {
 
 // ---------------------------------------------------------- TransferAdvisor
 
-TransferAdvisor::TransferAdvisor() : criticalDays(3.0), surplusDays(7.0) {}
+TransferAdvisor::TransferAdvisor() : criticalDays(3.0), surplusDays(7.0) {}  // 3.0 = kLowStockDays (ConsoleApp.cpp) = kLowDays (ReportGenerator.cpp)
 
 TransferAdvisor::TransferAdvisor(double criticalDays, double surplusDays)
     : criticalDays(criticalDays), surplusDays(surplusDays) {}

@@ -22,8 +22,9 @@ thread autosaves every few seconds.
 
 Needs a C++17 compiler and `make`. Standard library only.
 
-    make            # builds bin/relief
-    ./bin/relief    # run from the repository root so it finds data/
+    make                    # builds bin/relief
+    ./bin/relief            # uses ./data/ (run from the repository root)
+    ./bin/relief <dir>      # uses the CSV files in <dir> instead
 
     make test       # builds and runs the test suite (1923 assertions)
     make debug      # builds with -DRELIEF_DEBUG: object create/copy/destroy
@@ -31,9 +32,48 @@ Needs a C++17 compiler and `make`. Standard library only.
     make seed       # builds bin/seed and regenerates data/ (overwrites it)
     make clean
 
+The app does not create a missing data directory: a save into one reports the
+failure instead of crashing, but the directory must exist.
+
 CMake works too:
 
     cmake -S . -B build/cmake && cmake --build build/cmake
+
+## Before you demo: start from a fresh dataset
+
+**Every demo run must start from a fresh dataset**, because the app rewrites the
+CSV files in its data directory on every autosave and on exit. After one full
+pass, camp 2's rice is no longer low (demo step 5 shows no low-stock flag and no
+transfer) and every camp-1 family has already claimed today (step 4 prints
+"17 BLOCKED, 0 served"). Two safe ways:
+
+    make seed                                   # regenerates data/ (byte-deterministic)
+    # or run against a throwaway copy and leave data/ untouched:
+    mkdir -p /tmp/demo && cp data/*.csv /tmp/demo && ./bin/relief /tmp/demo
+
+`bash tests/demo_smoke.sh` is the automated end-to-end check (it drives the
+binary through a short session on a temporary copy of `data/`). It needs
+`bin/relief` to exist, so run `make` first; `make test` does not build it.
+
+## The eight-step demo
+
+The demo date is fixed at 2026-07-14. Menu numbers to press (`./bin/relief`):
+
+1. **Start.** The app loads the seeded data and shows the banner.
+2. **Register a family** (`2`) with an infant and an elderly member. The ration and vulnerability score are computed.
+3. **Admit to a full camp** (`3`). Camp 2 is full, so the overflow exception is caught and other camps are suggested; admit to one of those.
+4. **Distribute rations** (`4`), then run it again (`4`). The second claim the same day is blocked.
+5. **Stock** (`5`) shows days of supply with rice critical at camp 2; **transfer suggestions** (`7`) proposes moving rice from camp 3.
+6. **Log health cases** (`8`) for camp 2, repeating until the outbreak alert fires.
+7. **Daily report** (`10`), and answer `y` to export it as `data/report_<date>_camp<id>.csv` (git-ignored).
+8. **Quit** (`0`). Autosave runs; restart and the data is intact.
+
+The key sequence is `2, 3, 4, 5, 7, 8, 10, 0` (with `4` and `8` repeated); a full
+piped-input run with output is recorded in `docs/VERIFICATION.md`, section 8.
+
+**Seva First angles.** Affordability: it runs offline on any ordinary laptop with
+no server, no network and no licence. Scalability: another district is a
+different seed dataset in `data/`, not different code.
 
 ## The dataset
 
@@ -62,7 +102,11 @@ Linux machine. See `docs/VERIFICATION.md` for the recorded output.
 - `docs/OOP_MAPPING.md` maps every syllabus concept to a file and line, with the
   compiler evidence and an honest note on which constructs are taught rather
   than natural.
-- `docs/PLAN.md` is the plan this was built from.
+- `docs/superpowers/specs/2026-11-11-relief-camp-manager-design.md` is the design spec.
+- `tests/demo_smoke.sh` is the automated end-to-end check.
+- `docs/PLAN.md` is the task-by-task implementation plan this was built from,
+  kept for reference as process history (it is addressed to the implementer, not
+  to a reader of the project).
 
 ## Layout
 
