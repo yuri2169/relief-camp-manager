@@ -29,8 +29,11 @@ std::string csvField(const std::string& value) {
     return quoted;
 }
 
-// Stock answers 999 days both when an item has no demand and for very large
-// figures, so the two are told apart by asking the demand itself.
+// Stock::daysOfSupplyFor returns 999 only when the item has no daily demand;
+// it never caps a real figure. (The aggregate daysOfSupply() can pin at 999
+// when every demanded item exceeds it, but this report does not print it.)
+// So "no demand" is decided by asking the demand itself, and any item that has
+// demand is printed with its real computed number.
 const double kEpsilon = 1e-9;
 
 bool hasDemand(const Stock& stock, Item item) {
@@ -53,8 +56,6 @@ std::string ReportGenerator::stockTable(const Camp& camp) const {
             << std::left << std::setw(8) << itemUnit(item) << std::right;
         if (!hasDemand(camp.stock, item)) {
             out << "no daily demand";
-        } else if (days >= Stock::kUnlimitedDays) {
-            out << std::setw(7) << "999+" << " days";
         } else {
             out << std::setw(7) << days << " days";
             if (days <= kLowDays) { out << "  LOW"; }
@@ -62,7 +63,9 @@ std::string ReportGenerator::stockTable(const Camp& camp) const {
         out << "\n";
     }
     // The worst item is the one with demand and the fewest days; ties keep
-    // the lower index. Items with no demand never qualify.
+    // the lower index. Items with no demand never qualify. Stock's
+    // mostCriticalItem() is not used because, on a tie at 999 (no demand), it
+    // returns the lowest index even when that item has no demand at all.
     bool found = false;
     Item worstItem = Item::Rice;
     double worst = 0.0;
@@ -78,8 +81,6 @@ std::string ReportGenerator::stockTable(const Camp& camp) const {
     }
     if (!found) {
         out << "Worst item: none (no daily demand recorded)\n";
-    } else if (worst >= Stock::kUnlimitedDays) {
-        out << "Worst item: " << itemName(worstItem) << " (999+ days)\n";
     } else {
         out << "Worst item: " << itemName(worstItem) << " (" << worst << " days)\n";
     }

@@ -172,7 +172,7 @@ void run_report_tests() {
     ASSERT_TRUE(hasLine(bareStock, "Worst item: none (no daily demand recorded)"));
     ASSERT_FALSE(has(bareStock, "999"));
 
-    // Large stock against real demand is a capped figure, never "no demand".
+    // Large stock against real demand prints the real figure, never "no demand".
     Camp rich("Depot", "Jorhat", 10);
     rich.stockRef().set(Item::Rice, 5000.0);
     rich.stockRef().set(Item::Dal, 100.0);
@@ -182,19 +182,19 @@ void run_report_tests() {
     rich.stockRef().setDailyDemand(smallDemand);
     rich.stockRef().set(Item::Salt, 50000.0);
     std::string richTable = reporter.stockTable(rich);
-    ASSERT_TRUE(hasLine(richTable, "  Salt" + std::string(7,' ') + "50000.0 kg" + std::string(9,' ') + "999+ days"));
+    ASSERT_TRUE(hasLine(richTable, "  Salt" + std::string(7,' ') + "50000.0 kg" + std::string(6,' ') + "50000.0 days"));
     ASSERT_TRUE(hasLine(richTable, "  Dal" + std::string(10,' ') + "100.0 kg" + std::string(9,' ') + "10.0 days"));
     // Rice has stock but no demand: that one really is "no daily demand".
     ASSERT_TRUE(hasLine(richTable, "  Rice        5000.0 kg      no daily demand"));
     ASSERT_TRUE(hasLine(richTable, "Worst item: Dal (10.0 days)"));
-    ASSERT_FALSE(has(richTable, " 999 "));
-    // Only well-stocked items with demand: worst item is capped, not "none".
+    ASSERT_FALSE(has(richTable, "999"));
+    // Only well-stocked items with demand: worst item is real, not "none".
     Camp flush("Depot2", "Jorhat", 10);
     flush.stockRef().set(Item::Salt, 50000.0);
     Ration saltOnly;
     saltOnly.set(Item::Salt, 1.0);
     flush.stockRef().setDailyDemand(saltOnly);
-    ASSERT_TRUE(hasLine(reporter.stockTable(flush), "Worst item: Salt (999+ days)"));
+    ASSERT_TRUE(hasLine(reporter.stockTable(flush), "Worst item: Salt (50000.0 days)"));
 
     // An empty camp renders a fallback line in every empty section.
     Camp fresh("New Camp", "Jorhat", 10);
