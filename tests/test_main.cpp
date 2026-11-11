@@ -6,6 +6,7 @@ void run_date_tests();
 void run_ration_tests();
 void run_person_tests();
 void run_hierarchy_tests();
+void run_family_tests();
 
 int main() {
     std::cout << "Relief Camp Manager - test suite\n";
@@ -14,5 +15,6 @@ int main() {
     run_ration_tests();
     run_person_tests();
     run_hierarchy_tests();
+    run_family_tests();
     return testing::summary();
 }
