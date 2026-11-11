@@ -21,21 +21,23 @@
 //   shelters.csv       campId,label,capacity,occupancy
 //   stock.csv          campId,item,quantity
 //   families.csv       id,headName,village,campId
-//   members.csv        familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift
+//   members.csv        person_id,familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift
 //   volunteers.csv     id,name,age,sex,skill,shift,organisation
 //   distributions.csv  familyId,campId,date, then one column per item (enum order)
 //   stock_txns.csv     campId,item,quantity,incoming,date,note
 //   health.csv         campId,date,symptom,count
 //
-// A camp's daily demand is not stored: it is derived data (the sum of its
-// families' rations), so loadAll recomputes it. Family members have no ID
-// column; they take fresh Person ids on load, because nothing refers to them.
+// A camp's daily demand is not stored: stock.csv holds quantities only, and
+// demand is derived from the camp's families on load. A hand-set demand that
+// differs from that sum will not survive a reload.
+// Saving writes every file to "<name>.tmp" and renames them into place only
+// when all nine were written, so a failed save leaves the old files intact.
 //
 // [File handling] One file per kind of record, each with a header row.
 class CsvStore {
     std::string dir;
 
-    // Each of these throws ReliefException if the file cannot be written.
+    // Each of these writes a temporary file and throws FileFormatException if it fails.
     void saveCamps(const Registry<Camp>& camps) const;
     void saveShelters(const Registry<Camp>& camps) const;
     void saveStock(const Registry<Camp>& camps) const;
@@ -52,7 +54,7 @@ class CsvStore {
     void loadShelters(Registry<Camp>& camps) const;
     void loadStock(Registry<Camp>& camps) const;
     void loadFamilies(const Registry<Camp>& camps, Registry<Family>& families) const;
-    void loadMembers(Registry<Family>& families) const;
+    void loadMembers(const Registry<Volunteer>& volunteers, Registry<Family>& families) const;
     void loadVolunteers(Registry<Volunteer>& volunteers) const;
     void loadDistributions(DistributionLog& log) const;
     void loadStockTxns(StockLedger& ledger) const;
@@ -73,8 +75,8 @@ public:
                  const HealthMonitor& health) const;
 
     // Replaces the contents of everything passed in. If the files are
-    // malformed it throws FileFormatException and the objects are left holding
-    // whatever was read so far, so load into fresh objects.
+    // malformed it throws FileFormatException and every container is left
+    // empty, never half-loaded.
     void loadAll(Registry<Camp>& camps,
                  Registry<Family>& families,
                  Registry<Volunteer>& volunteers,

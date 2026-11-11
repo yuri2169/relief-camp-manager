@@ -19,6 +19,7 @@
 #include <fstream>
 #include <cstdio>
 #include <cstdlib>
+#include <sstream>
 
 // ---------------------------------------------------------------- helpers
 // The files these tests write go to a scratch directory, never to data/, so
@@ -72,6 +73,12 @@ static std::string readFile(const std::string& dir, const std::string& name) {
 }
 
 // Everything a CsvStore saves or loads, in one place.
+static std::string intStr(int v) {
+    std::ostringstream oss;
+    oss << v;
+    return oss.str();
+}
+
 struct World {
     Registry<Camp> camps;
     Registry<Family> families;
@@ -117,7 +124,7 @@ static const char* const kSheltersHeader = "campId,label,capacity,occupancy\n";
 static const char* const kStockHeader = "campId,item,quantity\n";
 static const char* const kFamiliesHeader = "id,headName,village,campId\n";
 static const char* const kMembersHeader =
-    "familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift\n";
+    "person_id,familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift\n";
 static const char* const kVolunteersHeader = "id,name,age,sex,skill,shift,organisation\n";
 static const char* const kDistHeader =
     "familyId,campId,date,Rice,Dal,Oil,Salt,ORS,Baby food,Tarpaulin\n";
@@ -498,6 +505,20 @@ void run_csv_tests() {
     ASSERT_TRUE(w2.health.at(1).getSymptom() == Symptom::SkinInfection);   // "Skin infection"
     ASSERT_TRUE(w2.health.outbreakAlert(savedSchoolId, today, Symptom::Diarrhoea));
 
+    // Person ids of family members survive the trip, member by member.
+    for (int i = 0; i < f->size(); i++) {
+        ASSERT_EQ(f2->memberAt(i).getId(), f->memberAt(i).getId());
+    }
+    for (int i = 0; i < b.second->size(); i++) {
+        ASSERT_EQ(second2->memberAt(i).getId(), b.second->memberAt(i).getId());
+    }
+
+    // A save leaves no temporary files behind.
+    for (int i = 0; i < 9; i++) {
+        std::ifstream leftover((dir + "/" + kFileNames[i] + ".tmp").c_str());
+        ASSERT_FALSE(leftover.is_open());
+    }
+
     // Saving what was loaded gives byte-for-byte the same files.
     std::string before[9];
     for (int i = 0; i < 9; i++) { before[i] = readFile(dir, kFileNames[i]); }
@@ -660,23 +681,34 @@ void run_csv_tests() {
         std::string(kFamiliesHeader) + "1,Head,Village\n", 2));
 
     // members.csv
-    const std::string m1 = "1,ADULT,Bipul Das,35,M,0,0,0,,\n";
+    const std::string m1 = "901,1,ADULT,Bipul Das,35,M,0,0,0,,\n";
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + m1 + "1,ROBOT,Rob,3,M,0,0,0,,\n", 3));         // unknown tag
+        std::string(kMembersHeader) + m1 + "902,1,ROBOT,Rob,3,M,0,0,0,,\n", 3));
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "1,VOLUNTEER,Vol,30,M,0,0,0,Cook,Day\n", 2));  // not a family member
+        std::string(kMembersHeader) + m1 + "901,1,ADULT,Same Id,3,M,0,0,0,,\n", 3));   // duplicate person id         // unknown tag
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "1,ADULT,Bipul Das,35,M,yes,0,0,,\n", 2));     // bad flag
+        std::string(kMembersHeader) + "903,1,VOLUNTEER,Vol,30,M,0,0,0,Cook,Day\n", 2));  // not a family member
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "1,ADULT,Bipul Das,35,X,0,0,0,,\n", 2));       // bad sex
+        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,35,M,yes,0,0,,\n", 2));     // bad flag
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "1,ADULT,Bipul Das,old,M,0,0,0,,\n", 2));      // bad age
+        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,35,X,0,0,0,,\n", 2));       // bad sex
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "1,ADULT,Bipul Das,-3,M,0,0,0,,\n", 2));       // negative age
+        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,old,M,0,0,0,,\n", 2));      // bad age
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "99,ADULT,Bipul Das,35,M,0,0,0,,\n", 2));      // unknown family
+        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,-3,M,0,0,0,,\n", 2));       // negative age
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + m1 + m1 + "1,ADULT,Short row\n", 4));          // too few fields
+        std::string(kMembersHeader) + "903,99,ADULT,Bipul Das,35,M,0,0,0,,\n", 2));      // unknown family
+    ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
+        std::string(kMembersHeader) + m1 + "902,1,ADULT,Two,35,M,0,0,0,,\n" + "903,1,ADULT,Short row\n", 4));          // too few fields
+
+    // A member may not reuse an outside volunteer's person id either.
+    {
+        saveWorld(store, good);
+        int volunteerId = good.volunteers.at(0)->getId();
+        writeFile(dir, "members.csv", std::string(kMembersHeader) + intStr(volunteerId) +
+                  ",1,ADULT,Clash,35,M,0,0,0,,\n");
+        ASSERT_TRUE(failsAt(store, "members.csv", 2));
+    }
 
     // volunteers.csv
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "volunteers.csv",
@@ -698,6 +730,9 @@ void run_csv_tests() {
         std::string(kDistHeader) + "1,1,14/07/2026" + zeros, 2));                    // wrong format
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "distributions.csv",
         std::string(kDistHeader) + "1,1,2026-07-14" + zeros + "1,1,2026-07-14,1,2,3\n", 3)); // too few
+    ASSERT_TRUE(badFileFailsAt(store, good, dir, "distributions.csv",
+        std::string(kDistHeader) + "1,1,2026-07-14" + zeros + "1,2,2026-07-15" + zeros +
+        "1,2,2026-07-14" + zeros, 4));                                               // same family+day, other camp
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "distributions.csv",
         std::string(kDistHeader) + "1,1,2026-07-14,1,1,1,1,1,1,x\n", 2));            // bad quantity
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "distributions.csv",
@@ -765,6 +800,31 @@ void run_csv_tests() {
         ASSERT_STR_EQ(nl.camps.at(0)->getName(), "Two\nLines");
     }
 
+    // A load that fails halfway leaves every container empty, not half a camp.
+    {
+        saveWorld(store, good);
+        writeFile(dir, "health.csv", std::string(kHealthHeader) + "1,2026-07-14,Fever,3\n" +
+                  "1,2026-07-14,Plague,3\n");
+        World half;
+        ASSERT_THROWS(loadWorld(store, half), FileFormatException);
+        ASSERT_EQ(half.camps.size(), 0);
+        ASSERT_EQ(half.families.size(), 0);
+        ASSERT_EQ(half.volunteers.size(), 0);
+        ASSERT_EQ(half.log.size(), 0);
+        ASSERT_EQ(half.ledger.size(), 0);
+        ASSERT_EQ(half.health.size(), 0);
+        // Previously loaded content is cleared too: state is well-defined.
+        World again;
+        saveWorld(store, good);
+        loadWorld(store, again);
+        ASSERT_EQ(again.camps.size(), 2);
+        writeFile(dir, "camps.csv", std::string(kCampsHeader) + "1,Bad,X,10,99\n");
+        ASSERT_THROWS(loadWorld(store, again), FileFormatException);
+        ASSERT_EQ(again.camps.size(), 0);
+        ASSERT_EQ(again.families.size(), 0);
+        ASSERT_EQ(again.log.size(), 0);
+    }
+
     // A partial data directory loads what it has: a missing file is not an error.
     {
         saveWorld(store, good);
@@ -785,7 +845,7 @@ void run_csv_tests() {
     ASSERT_EQ(none.camps.size(), 0);
     // ... but saving somewhere that does not exist says so, rather than
     // silently losing the operator's data.
-    ASSERT_THROWS(saveWorld(absent, good), ReliefException);
+    ASSERT_THROWS(saveWorld(absent, good), FileFormatException);
     ASSERT_FALSE(absent.dataExists());
 
     removeDataFiles(dir);

@@ -12,6 +12,8 @@
 #include <iomanip>
 #include <memory>
 #include <stdexcept>
+#include <set>
+#include <cstdio>
 #include <utility>
 
 // ------------------------------------------------------------ file names
@@ -44,17 +46,36 @@ static std::string flagText(bool value) {
 }
 
 // Writes with "\n" in binary mode, so every platform produces the same bytes.
-static void writeLines(const std::string& fullPath, const std::vector<std::string>& lines) {
-    std::ofstream out(fullPath.c_str(), std::ios::binary);
+// The text goes to "<file>.tmp" first; saveAll renames it into place only once
+// all nine files have been written, so a full disk or a crash mid-save leaves
+// the previous files untouched.
+static std::string tempPath(const std::string& fullPath) {
+    return fullPath + ".tmp";
+}
+
+static void writeLines(const std::string& fullPath, const std::string& fileName,
+                       const std::vector<std::string>& lines) {
+    std::ofstream out(tempPath(fullPath).c_str(), std::ios::binary);
     if (!out.is_open()) {
-        throw ReliefException("cannot write " + fullPath);
+        throw FileFormatException(fileName, 0, "cannot write " + tempPath(fullPath));
     }
     for (std::size_t i = 0; i < lines.size(); i++) {
         out << lines[i] << '\n';
     }
     out.close();
     if (out.fail()) {
-        throw ReliefException("error while writing " + fullPath);
+        throw FileFormatException(fileName, 0, "error while writing " + tempPath(fullPath));
+    }
+}
+
+// Moves the finished temporary file over the real one.
+static void commitFile(const std::string& fullPath, const std::string& fileName) {
+    if (std::rename(tempPath(fullPath).c_str(), fullPath.c_str()) != 0) {
+        // Windows will not rename over an existing file, so remove it and retry.
+        std::remove(fullPath.c_str());
+        if (std::rename(tempPath(fullPath).c_str(), fullPath.c_str()) != 0) {
+            throw FileFormatException(fileName, 0, "cannot replace " + fullPath);
+        }
     }
 }
 
@@ -261,7 +282,7 @@ void CsvStore::saveCamps(const Registry<Camp>& camps) const {
         row.push_back(intText(c->getOccupancy()));
         lines.push_back(Csv::join(row));
     }
-    writeLines(path(kCampsFile), lines);
+    writeLines(path(kCampsFile), kCampsFile, lines);
 }
 
 void CsvStore::saveShelters(const Registry<Camp>& camps) const {
@@ -279,7 +300,7 @@ void CsvStore::saveShelters(const Registry<Camp>& camps) const {
             lines.push_back(Csv::join(row));
         }
     }
-    writeLines(path(kSheltersFile), lines);
+    writeLines(path(kSheltersFile), kSheltersFile, lines);
 }
 
 void CsvStore::saveStock(const Registry<Camp>& camps) const {
@@ -296,7 +317,7 @@ void CsvStore::saveStock(const Registry<Camp>& camps) const {
             lines.push_back(Csv::join(row));
         }
     }
-    writeLines(path(kStockFile), lines);
+    writeLines(path(kStockFile), kStockFile, lines);
 }
 
 void CsvStore::saveFamilies(const Registry<Family>& families) const {
@@ -311,12 +332,12 @@ void CsvStore::saveFamilies(const Registry<Family>& families) const {
         row.push_back(intText(f->getCampId()));
         lines.push_back(Csv::join(row));
     }
-    writeLines(path(kFamiliesFile), lines);
+    writeLines(path(kFamiliesFile), kFamiliesFile, lines);
 }
 
 void CsvStore::saveMembers(const Registry<Family>& families) const {
     std::vector<std::string> lines;
-    lines.push_back("familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift");
+    lines.push_back("person_id,familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift");
     for (int i = 0; i < families.size(); i++) {
         const Family* f = families.at(i);
         for (int m = 0; m < f->size(); m++) {
@@ -330,6 +351,7 @@ void CsvStore::saveMembers(const Registry<Family>& families) const {
                 shift = worker->getShift();
             }
             std::vector<std::string> row;
+            row.push_back(intText(member.getId()));
             row.push_back(intText(f->getId()));
             row.push_back(member.typeTag());
             row.push_back(member.getName());
@@ -343,7 +365,7 @@ void CsvStore::saveMembers(const Registry<Family>& families) const {
             lines.push_back(Csv::join(row));
         }
     }
-    writeLines(path(kMembersFile), lines);
+    writeLines(path(kMembersFile), kMembersFile, lines);
 }
 
 void CsvStore::saveVolunteers(const Registry<Volunteer>& volunteers) const {
@@ -361,7 +383,7 @@ void CsvStore::saveVolunteers(const Registry<Volunteer>& volunteers) const {
         row.push_back(v->getOrganisation());
         lines.push_back(Csv::join(row));
     }
-    writeLines(path(kVolunteersFile), lines);
+    writeLines(path(kVolunteersFile), kVolunteersFile, lines);
 }
 
 void CsvStore::saveDistributions(const DistributionLog& log) const {
@@ -382,7 +404,7 @@ void CsvStore::saveDistributions(const DistributionLog& log) const {
         }
         lines.push_back(Csv::join(row));
     }
-    writeLines(path(kDistributionsFile), lines);
+    writeLines(path(kDistributionsFile), kDistributionsFile, lines);
 }
 
 void CsvStore::saveStockTxns(const StockLedger& ledger) const {
@@ -399,7 +421,7 @@ void CsvStore::saveStockTxns(const StockLedger& ledger) const {
         row.push_back(t.getNote());
         lines.push_back(Csv::join(row));
     }
-    writeLines(path(kStockTxnsFile), lines);
+    writeLines(path(kStockTxnsFile), kStockTxnsFile, lines);
 }
 
 void CsvStore::saveHealth(const HealthMonitor& health) const {
@@ -414,7 +436,7 @@ void CsvStore::saveHealth(const HealthMonitor& health) const {
         row.push_back(intText(h.getCount()));
         lines.push_back(Csv::join(row));
     }
-    writeLines(path(kHealthFile), lines);
+    writeLines(path(kHealthFile), kHealthFile, lines);
 }
 
 void CsvStore::saveAll(const Registry<Camp>& camps,
@@ -423,15 +445,31 @@ void CsvStore::saveAll(const Registry<Camp>& camps,
                        const DistributionLog& log,
                        const StockLedger& ledger,
                        const HealthMonitor& health) const {
-    saveCamps(camps);
-    saveShelters(camps);
-    saveStock(camps);
-    saveFamilies(families);
-    saveMembers(families);
-    saveVolunteers(volunteers);
-    saveDistributions(log);
-    saveStockTxns(ledger);
-    saveHealth(health);
+    const std::string* names[] = {&kCampsFile, &kSheltersFile, &kStockFile, &kFamiliesFile,
+                                  &kMembersFile, &kVolunteersFile, &kDistributionsFile,
+                                  &kStockTxnsFile, &kHealthFile};
+    const int fileCount = 9;
+    try {
+        // Step 1: write every file under a temporary name.
+        saveCamps(camps);
+        saveShelters(camps);
+        saveStock(camps);
+        saveFamilies(families);
+        saveMembers(families);
+        saveVolunteers(volunteers);
+        saveDistributions(log);
+        saveStockTxns(ledger);
+        saveHealth(health);
+        // Step 2: only now replace the real files.
+        for (int i = 0; i < fileCount; i++) {
+            commitFile(path(*names[i]), *names[i]);
+        }
+    } catch (...) {
+        for (int i = 0; i < fileCount; i++) {
+            std::remove(tempPath(path(*names[i])).c_str());     // no stray .tmp left behind
+        }
+        throw;
+    }
 }
 
 // ---- load
@@ -553,43 +591,65 @@ void CsvStore::loadFamilies(const Registry<Camp>& camps, Registry<Family>& famil
     Family::resetIdCounter(maxId + 1);
 }
 
-void CsvStore::loadMembers(Registry<Family>& families) const {
-    CsvReader reader(path(kMembersFile), kMembersFile, 10);
+void CsvStore::loadMembers(const Registry<Volunteer>& volunteers,
+                           Registry<Family>& families) const {
+    CsvReader reader(path(kMembersFile), kMembersFile, 11);
     if (!reader.isOpen()) {
         return;
     }
+    // Volunteers and family members share one Person id space.
+    std::set<int> usedIds;
+    for (int i = 0; i < volunteers.size(); i++) {
+        usedIds.insert(volunteers.at(i)->getId());
+    }
     std::vector<std::string> f;
+    int maxId = 0;
     while (reader.next(f)) {
         int line = reader.line();
-        int familyId = Csv::toInt(f[0], kMembersFile, line);
+        int personId = parseId(f[0], kMembersFile, line);
+        if (usedIds.count(personId) != 0) {
+            fail(kMembersFile, line, "duplicate person id " + f[0]);
+        }
+        int familyId = Csv::toInt(f[1], kMembersFile, line);
         Family* family = families.findById(familyId);
         if (family == 0) {
-            fail(kMembersFile, line, "no family with id " + f[0]);
+            fail(kMembersFile, line, "no family with id " + f[1]);
         }
-        const std::string& tag = f[1];
+        const std::string& tag = f[2];
         if (tag == "VOLUNTEER") {
             fail(kMembersFile, line, "VOLUNTEER belongs in volunteers.csv, not in a family");
         }
-        int age = parseNonNegative(f[3], "age", kMembersFile, line);
-        char sex = parseSex(f[4], kMembersFile, line);
-        bool pregnant = parseFlag(f[5], kMembersFile, line);
-        bool disabled = parseFlag(f[6], kMembersFile, line);
-        bool lactating = parseFlag(f[7], kMembersFile, line);
+        int age = parseNonNegative(f[4], "age", kMembersFile, line);
+        char sex = parseSex(f[5], kMembersFile, line);
+        bool pregnant = parseFlag(f[6], kMembersFile, line);
+        bool disabled = parseFlag(f[7], kMembersFile, line);
+        bool lactating = parseFlag(f[8], kMembersFile, line);
 
         // Each member is built directly (never cloned: Person's copy
-        // constructor would mint a new id) and the family takes ownership. Its
-        // camp is its family's camp. Members have no saved id, so they take
-        // fresh Person ids, which loadVolunteers has already kept clear of
-        // every outside volunteer's id.
+        // constructor would mint a new id), given its saved id, and handed to
+        // the family, which takes ownership. Its camp is its family's camp.
         Person* person = 0;
         try {
-            person = makePerson(tag, f[2], age, sex, familyId, family->getCampId(), f[8], f[9]);
+            person = makePerson(tag, f[3], age, sex, familyId, family->getCampId(), f[9], f[10]);
         } catch (const std::invalid_argument&) {
             fail(kMembersFile, line, "unknown person type \"" + tag + "\"");
         }
+        person->adoptId(personId);
         person->setFlags(pregnant, disabled, lactating);
         family->addMember(person);
+        usedIds.insert(personId);
+        if (personId > maxId) {
+            maxId = personId;
+        }
     }
+    // One past the largest id seen in members.csv AND volunteers.csv, and
+    // never backwards past ids already handed out in this session.
+    int next = Person::lastIssuedId() + 1;
+    if (maxId + 1 > next) next = maxId + 1;
+    for (std::set<int>::const_iterator it = usedIds.begin(); it != usedIds.end(); ++it) {
+        if (*it + 1 > next) next = *it + 1;
+    }
+    Person::resetIdCounter(next);
 }
 
 void CsvStore::loadVolunteers(Registry<Volunteer>& volunteers) const {
@@ -640,7 +700,12 @@ void CsvStore::loadDistributions(DistributionLog& log) const {
             amount.set(itemAt(k), parseQuantity(f[kDistributionFixedColumns + k],
                                                 kDistributionsFile, line));
         }
-        // loadEntry, not record: the file says what already happened.
+        // loadEntry skips the duplicate rule (the file says what already
+        // happened), so a hand-edited file is checked here instead: one claim
+        // per family per day, whatever the camp.
+        if (log.alreadyClaimed(familyId, date)) {
+            fail(kDistributionsFile, line, "family " + f[0] + " already claimed on " + f[2]);
+        }
         log.loadEntry(Allocation(familyId, campId, date, amount));
     }
 }
@@ -713,19 +778,38 @@ void CsvStore::loadAll(Registry<Camp>& camps,
     ledger.clear();
     health.clear();
 
-    // Order matters: shelters and stock need their camps, families need the
-    // camps they sit in, members need their families. Volunteers go before
-    // members so the Person id counter is already clear of their saved ids
-    // when the members take fresh ones.
-    loadCamps(camps);
-    loadShelters(camps);
-    loadStock(camps);
-    loadFamilies(camps, families);
-    loadVolunteers(volunteers);
-    loadMembers(families);
-    restoreDemand(camps, families);
-    loadDistributions(log);
-    loadStockTxns(ledger);
-    loadHealth(health);
+    try {
+        // Order: shelters and stock need their camps, families need the camps
+        // they sit in, members need their families. Volunteers are loaded
+        // before members; with saved ids on both sides that is no longer
+        // required (each loader keeps the Person counter past every id seen),
+        // it just keeps the checks simple.
+        loadCamps(camps);
+        loadShelters(camps);
+        loadStock(camps);
+        loadFamilies(camps, families);
+        loadVolunteers(volunteers);
+        loadMembers(volunteers, families);
+
+        // stock.csv stores quantities only. A camp's daily demand is derived
+        // data: it is recomputed here from the camp's families, exactly as the
+        // menu's refreshDemand does. A hand-set demand that differs from that
+        // sum will therefore not survive a reload.
+        restoreDemand(camps, families);
+
+        loadDistributions(log);
+        loadStockTxns(ledger);
+        loadHealth(health);
+    } catch (...) {
+        // A failed load must not leave half a camp behind: empty everything
+        // and let the file-and-line message reach the operator unchanged.
+        camps.clear();
+        families.clear();
+        volunteers.clear();
+        log.clear();
+        ledger.clear();
+        health.clear();
+        throw;
+    }
     RELIEF_LIFECYCLE("Loaded " << camps.size() << " camps, " << families.size() << " families from " << dir);
 }
