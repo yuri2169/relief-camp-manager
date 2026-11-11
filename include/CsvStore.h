@@ -21,11 +21,18 @@
 //   shelters.csv       campId,label,capacity,occupancy
 //   stock.csv          campId,item,quantity
 //   families.csv       id,headName,village,campId
-//   members.csv        person_id,familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift
+//   members.csv        person_id,familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift,shelterLabel
 //   volunteers.csv     id,name,age,sex,skill,shift,organisation
 //   distributions.csv  familyId,campId,date, then one column per item (enum order)
 //   stock_txns.csv     campId,item,quantity,incoming,date,note
 //   health.csv         campId,date,symptom,count
+//
+// Three levels of occupancy are stored, and the loader restores all three
+// exactly as written and deliberately does not cross-validate them, because
+// the model does not keep them in lockstep: Camp::occupancy is the
+// authoritative camp head-count; a shelter's occupancy is the aggregate
+// placement figure as saved; a resident's shelterLabel is that person's own
+// placement (empty means unplaced).
 //
 // A camp's daily demand is not stored: stock.csv holds quantities only, and
 // demand is derived from the camp's families on load. A hand-set demand that

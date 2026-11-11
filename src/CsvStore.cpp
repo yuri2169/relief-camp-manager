@@ -1,6 +1,8 @@
 #include "CsvStore.h"
 #include "Csv.h"
+#include "CsvReader.h"
 #include "Exceptions.h"
+#include "Resident.h"
 #include "Infant.h"
 #include "Child.h"
 #include "Adult.h"
@@ -13,6 +15,7 @@
 #include <memory>
 #include <stdexcept>
 #include <set>
+#include <utility>
 #include <cstdio>
 #include <utility>
 
@@ -68,14 +71,31 @@ static void writeLines(const std::string& fullPath, const std::string& fileName,
     }
 }
 
-// Moves the finished temporary file over the real one.
+// Moves the finished temporary file over the real one without ever having
+// both copies absent: the old file is renamed to "<name>.bak" first and only
+// deleted once the new one is in place. (std::rename will not overwrite on
+// Windows, which is why a plain rename is not enough.)
 static void commitFile(const std::string& fullPath, const std::string& fileName) {
+    const std::string backup = fullPath + ".bak";
+    std::remove(backup.c_str());                        // a stale one from a crash
+    bool hadOld = false;
+    {
+        std::ifstream probe(fullPath.c_str());
+        hadOld = probe.is_open();
+    }
+    if (hadOld && std::rename(fullPath.c_str(), backup.c_str()) != 0) {
+        throw FileFormatException(fileName, 0, "cannot back up " + fullPath +
+                                  "; the new data is kept in " + tempPath(fullPath));
+    }
     if (std::rename(tempPath(fullPath).c_str(), fullPath.c_str()) != 0) {
-        // Windows will not rename over an existing file, so remove it and retry.
-        std::remove(fullPath.c_str());
-        if (std::rename(tempPath(fullPath).c_str(), fullPath.c_str()) != 0) {
-            throw FileFormatException(fileName, 0, "cannot replace " + fullPath);
+        if (hadOld) {
+            std::rename(backup.c_str(), fullPath.c_str());     // put the old file back
         }
+        throw FileFormatException(fileName, 0, "cannot replace " + fullPath +
+                                  "; the new data is kept in " + tempPath(fullPath));
+    }
+    if (hadOld) {
+        std::remove(backup.c_str());
     }
 }
 
@@ -83,85 +103,6 @@ static void commitFile(const std::string& fullPath, const std::string& fileName)
 static void fail(const std::string& file, int line, const std::string& detail) {
     throw FileFormatException(file, line, detail);
 }
-
-// Reads one CSV file record by record. The header is line 1; the first data
-// row is line 2. A quoted field may contain a line break, so one record can
-// cover several physical lines; its number is the line it STARTS on. Blank
-// lines are skipped, a trailing '\r' (a file saved on Windows) is ignored and
-// so is a spreadsheet's byte-order mark.
-class CsvReader {
-    std::ifstream in;
-    std::string file;
-    int expected;       // columns every row must have
-    int nextLine;       // number of the next physical line to read
-    int recordLine;     // line the most recent record started on
-
-    bool readPhysicalLine(std::string& text) {
-        if (!std::getline(in, text)) {
-            return false;
-        }
-        nextLine++;
-        if (!text.empty() && text[text.size() - 1] == '\r') {
-            text.erase(text.size() - 1);
-        }
-        return true;
-    }
-
-    static bool hasOpenQuote(const std::string& text) {
-        bool open = false;
-        for (std::size_t i = 0; i < text.size(); i++) {
-            if (text[i] == '"') {
-                open = !open;
-            }
-        }
-        return open;
-    }
-
-    bool readRecord(std::vector<std::string>& fields) {
-        std::string text;
-        do {
-            recordLine = nextLine;
-            if (!readPhysicalLine(text)) {
-                return false;
-            }
-        } while (text.empty());                     // skip blank lines
-        if (recordLine == 1 && text.compare(0, 3, "\xEF\xBB\xBF") == 0) {
-            text.erase(0, 3);
-        }
-        while (hasOpenQuote(text)) {                // the field continues on the next line
-            std::string more;
-            if (!readPhysicalLine(more)) {
-                fail(file, recordLine, "a quoted field is never closed");
-            }
-            text += "\n" + more;
-        }
-        fields = Csv::split(text);
-        return true;
-    }
-
-public:
-    // Opens the file and checks the header has `columns` columns.
-    CsvReader(const std::string& fullPath, const std::string& fileName, int columns)
-        : in(fullPath.c_str(), std::ios::binary), file(fileName), expected(columns),
-          nextLine(1), recordLine(0) {
-        std::vector<std::string> header;
-        if (in.is_open() && readRecord(header)) {
-            Csv::require(static_cast<int>(header.size()), columns, file, recordLine);
-        }
-    }
-
-    bool isOpen() const { return in.is_open(); }
-    int line() const { return recordLine; }
-
-    // The next data row, already checked to have the right number of fields.
-    bool next(std::vector<std::string>& fields) {
-        if (!readRecord(fields)) {
-            return false;
-        }
-        Csv::require(static_cast<int>(fields.size()), expected, file, recordLine);
-        return true;
-    }
-};
 
 static bool parseFlag(const std::string& text, const std::string& file, int line) {
     if (text == "1") return true;
@@ -263,7 +204,9 @@ Person* CsvStore::makePerson(const std::string& typeTag, const std::string& name
         return new ResidentVolunteer(name, age, sex, familyId, campId, skill, shift);
     }
     if (typeTag == "VOLUNTEER") {
-        return new Volunteer(name, age, sex, skill, shift, "");
+        // An outside volunteer needs an organisation this signature cannot
+        // carry, and is never a family member: build it directly instead.
+        throw std::invalid_argument("VOLUNTEER cannot be made here; construct a Volunteer directly");
     }
     throw std::invalid_argument("unknown person type \"" + typeTag + "\"");
 }
@@ -337,13 +280,18 @@ void CsvStore::saveFamilies(const Registry<Family>& families) const {
 
 void CsvStore::saveMembers(const Registry<Family>& families) const {
     std::vector<std::string> lines;
-    lines.push_back("person_id,familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift");
+    lines.push_back("person_id,familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift,shelterLabel");
     for (int i = 0; i < families.size(); i++) {
         const Family* f = families.at(i);
         for (int m = 0; m < f->size(); m++) {
             const Person& member = f->memberAt(m);
             std::string skill;
             std::string shift;
+            std::string shelterLabel;
+            const Resident* resident = dynamic_cast<const Resident*>(&member);
+            if (resident != 0) {
+                shelterLabel = resident->getShelterLabel();
+            }
             // dynamic_cast is the honest tool here: only some members carry a skill.
             const ResidentVolunteer* worker = dynamic_cast<const ResidentVolunteer*>(&member);
             if (worker != 0) {
@@ -362,6 +310,7 @@ void CsvStore::saveMembers(const Registry<Family>& families) const {
             row.push_back(flagText(member.isLactating()));
             row.push_back(skill);
             row.push_back(shift);
+            row.push_back(shelterLabel);
             lines.push_back(Csv::join(row));
         }
     }
@@ -449,6 +398,7 @@ void CsvStore::saveAll(const Registry<Camp>& camps,
                                   &kMembersFile, &kVolunteersFile, &kDistributionsFile,
                                   &kStockTxnsFile, &kHealthFile};
     const int fileCount = 9;
+    int committing = -1;        // index of the file being renamed, if any
     try {
         // Step 1: write every file under a temporary name.
         saveCamps(camps);
@@ -462,12 +412,17 @@ void CsvStore::saveAll(const Registry<Camp>& camps,
         saveHealth(health);
         // Step 2: only now replace the real files.
         for (int i = 0; i < fileCount; i++) {
+            committing = i;
             commitFile(path(*names[i]), *names[i]);
         }
     } catch (...) {
         for (int i = 0; i < fileCount; i++) {
-            std::remove(tempPath(path(*names[i])).c_str());     // no stray .tmp left behind
+            if (i != committing) {                               // no stray .tmp left behind
+                std::remove(tempPath(path(*names[i])).c_str());
+            }
         }
+        // The .tmp of a failed commit is kept (the exception names it) so the
+        // newest data stays recoverable.
         throw;
     }
 }
@@ -506,7 +461,9 @@ void CsvStore::loadCamps(Registry<Camp>& camps) const {
             maxId = id;
         }
     }
-    Camp::resetIdCounter(maxId + 1);
+    // Never backwards past ids already handed out in this session.
+    int current = Camp::generateId();
+    Camp::resetIdCounter(current > maxId + 1 ? current : maxId + 1);
 }
 
 void CsvStore::loadShelters(Registry<Camp>& camps) const {
@@ -527,17 +484,8 @@ void CsvStore::loadShelters(Registry<Camp>& camps) const {
         if (occupancy > capacity) {
             fail(kSheltersFile, line, "occupancy " + f[3] + " is above capacity " + f[2]);
         }
-        // The camp's head-count is authoritative; its shelters only say where
-        // those people sleep, so together they can never hold more than the camp.
-        int placed = occupancy;
-        for (int s = 0; s < camp->shelterCount(); s++) {
-            placed += camp->shelterAt(s).getOccupancy();
-        }
-        if (placed > camp->getOccupancy()) {
-            fail(kSheltersFile, line, "shelters of camp " + f[0] + " would hold " +
-                 intText(placed) + " people but the camp holds only " +
-                 intText(camp->getOccupancy()));
-        }
+        // Restored exactly as saved. The model does not keep a camp's head-count
+        // and its shelters' figures in lockstep, so they are not cross-checked.
         Camp::Shelter shelter(f[1], capacity);
         shelter.setOccupancy(occupancy);
         camp->addShelter(shelter);
@@ -550,6 +498,7 @@ void CsvStore::loadStock(Registry<Camp>& camps) const {
         return;
     }
     std::vector<std::string> f;
+    std::set<std::pair<int, int> > seen;      // (camp id, item index) already read
     while (reader.next(f)) {
         int line = reader.line();
         int campId = Csv::toInt(f[0], kStockFile, line);
@@ -558,6 +507,9 @@ void CsvStore::loadStock(Registry<Camp>& camps) const {
             fail(kStockFile, line, "no camp with id " + f[0]);
         }
         Item item = parseItem(f[1], kStockFile, line);
+        if (!seen.insert(std::make_pair(campId, itemIndex(item))).second) {
+            fail(kStockFile, line, "camp " + f[0] + " already has a stock row for " + f[1]);
+        }
         double quantity = parseQuantity(f[2], kStockFile, line);   // Stock::set does not check
         camp->stockRef().set(item, quantity);
     }
@@ -588,12 +540,13 @@ void CsvStore::loadFamilies(const Registry<Camp>& camps, Registry<Family>& famil
             maxId = id;
         }
     }
-    Family::resetIdCounter(maxId + 1);
+    int current = Family::generateId();
+    Family::resetIdCounter(current > maxId + 1 ? current : maxId + 1);
 }
 
 void CsvStore::loadMembers(const Registry<Volunteer>& volunteers,
                            Registry<Family>& families) const {
-    CsvReader reader(path(kMembersFile), kMembersFile, 11);
+    CsvReader reader(path(kMembersFile), kMembersFile, 12);
     if (!reader.isOpen()) {
         return;
     }
@@ -635,6 +588,11 @@ void CsvStore::loadMembers(const Registry<Volunteer>& volunteers,
             fail(kMembersFile, line, "unknown person type \"" + tag + "\"");
         }
         person->adoptId(personId);
+        // A resident's own placement; empty means not placed in a shelter.
+        Resident* resident = dynamic_cast<Resident*>(person);
+        if (resident != 0 && !f[11].empty()) {
+            resident->assignTo(family->getCampId(), f[11]);
+        }
         person->setFlags(pregnant, disabled, lactating);
         family->addMember(person);
         usedIds.insert(personId);
@@ -692,8 +650,8 @@ void CsvStore::loadDistributions(DistributionLog& log) const {
     std::vector<std::string> f;
     while (reader.next(f)) {
         int line = reader.line();
-        int familyId = Csv::toInt(f[0], kDistributionsFile, line);
-        int campId = Csv::toInt(f[1], kDistributionsFile, line);
+        int familyId = parseId(f[0], kDistributionsFile, line);
+        int campId = parseId(f[1], kDistributionsFile, line);
         Date date = parseDate(f[2], kDistributionsFile, line);
         Ration amount;
         for (int k = 0; k < ITEM_COUNT; k++) {
@@ -718,7 +676,7 @@ void CsvStore::loadStockTxns(StockLedger& ledger) const {
     std::vector<std::string> f;
     while (reader.next(f)) {
         int line = reader.line();
-        int campId = Csv::toInt(f[0], kStockTxnsFile, line);
+        int campId = parseId(f[0], kStockTxnsFile, line);
         Item item = parseItem(f[1], kStockTxnsFile, line);
         double quantity = Csv::toDouble(f[2], kStockTxnsFile, line);
         if (quantity <= 0.0) {                       // loadTxn does not check
@@ -738,7 +696,7 @@ void CsvStore::loadHealth(HealthMonitor& health) const {
     std::vector<std::string> f;
     while (reader.next(f)) {
         int line = reader.line();
-        int campId = Csv::toInt(f[0], kHealthFile, line);
+        int campId = parseId(f[0], kHealthFile, line);
         Date date = parseDate(f[1], kHealthFile, line);
         Symptom symptom = parseSymptom(f[2], kHealthFile, line);
         int count = Csv::toInt(f[3], kHealthFile, line);

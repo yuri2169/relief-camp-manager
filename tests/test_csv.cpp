@@ -7,6 +7,8 @@
 #include "Infant.h"
 #include "Child.h"
 #include "Adult.h"
+#include "Resident.h"
+#include "CsvReader.h"
 #include "Elderly.h"
 #include "ResidentVolunteer.h"
 #include "Volunteer.h"
@@ -124,7 +126,7 @@ static const char* const kSheltersHeader = "campId,label,capacity,occupancy\n";
 static const char* const kStockHeader = "campId,item,quantity\n";
 static const char* const kFamiliesHeader = "id,headName,village,campId\n";
 static const char* const kMembersHeader =
-    "person_id,familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift\n";
+    "person_id,familyId,typeTag,name,age,sex,pregnant,disabled,lactating,skill,shift,shelterLabel\n";
 static const char* const kVolunteersHeader = "id,name,age,sex,skill,shift,organisation\n";
 static const char* const kDistHeader =
     "familyId,campId,date,Rice,Dal,Oil,Salt,ORS,Baby food,Tarpaulin\n";
@@ -159,7 +161,9 @@ static Built buildWorld(World& w, const Date& today) {
     b.family = w.families.add(std::unique_ptr<Family>(new Family(kAwkwardHead, "Bhuragaon")));
     Family* f = b.family;
     f->setCampId(b.school->getId());
-    f->addMember(new Adult("Bipul Das", 35, 'M', f->getId(), b.school->getId()));
+    Adult* bipul = new Adult("Bipul Das", 35, 'M', f->getId(), b.school->getId());
+    bipul->assignTo(b.school->getId(), "Room-1");       // placed; the others are not
+    f->addMember(bipul);
     Adult* mother = new Adult("Rina Das", 29, 'F', f->getId(), b.school->getId());
     mother->setFlags(true, false, false);               // pregnant - must survive the trip
     f->addMember(mother);
@@ -280,15 +284,16 @@ void run_csv_tests() {
 
     // --- makePerson turns a tag back into the right concrete class ---
     {
-        const char* tags[] = {"INFANT", "CHILD", "ADULT", "ELDERLY", "RESIDENT_VOLUNTEER",
-                              "VOLUNTEER"};
-        for (int i = 0; i < 6; i++) {
+        const char* tags[] = {"INFANT", "CHILD", "ADULT", "ELDERLY", "RESIDENT_VOLUNTEER"};
+        for (int i = 0; i < 5; i++) {
             std::unique_ptr<Person> p(CsvStore::makePerson(tags[i], "Test", 20, 'F', 1, 2,
                                                            "Cook", "Day"));
             ASSERT_TRUE(p.get() != 0);
             ASSERT_STR_EQ(p->typeTag(), tags[i]);
             ASSERT_STR_EQ(p->getName(), "Test");
         }
+        ASSERT_THROWS(CsvStore::makePerson("VOLUNTEER", "X", 1, 'M', 1, 1, "Cook", "Day"),
+                      std::invalid_argument);
         ASSERT_THROWS(CsvStore::makePerson("ROBOT", "X", 1, 'M', 1, 1, "", ""),
                       std::invalid_argument);
         ASSERT_THROWS(CsvStore::makePerson("", "X", 1, 'M', 1, 1, "", ""),
@@ -412,7 +417,17 @@ void run_csv_tests() {
         ASSERT_EQ(c.isLactating() ? 1 : 0, a.isLactating() ? 1 : 0);
         ASSERT_EQ(c.vulnerabilityScore(), a.vulnerabilityScore());
         ASSERT_TRUE(c.rationNeed() == a.rationNeed());
+        const Resident* ra = dynamic_cast<const Resident*>(&a);
+        const Resident* rc = dynamic_cast<const Resident*>(&c);
+        ASSERT_TRUE(ra != 0 && rc != 0);
+        if (ra != 0 && rc != 0) {
+            ASSERT_STR_EQ(rc->getShelterLabel(), ra->getShelterLabel());
+            ASSERT_EQ(rc->getCampId(), ra->getCampId());
+            ASSERT_EQ(rc->getFamilyId(), ra->getFamilyId());
+        }
     }
+    ASSERT_STR_EQ(dynamic_cast<const Resident&>(f2->memberAt(0)).getShelterLabel(), "Room-1");
+    ASSERT_STR_EQ(dynamic_cast<const Resident&>(f2->memberAt(1)).getShelterLabel(), "");
     ASSERT_STR_EQ(f2->memberAt(2).getName(), "Rahul \"Raju\" Das, Jr");
     ASSERT_TRUE(f2->memberAt(2).isDisabled());
 
@@ -655,14 +670,26 @@ void run_csv_tests() {
         std::string(kSheltersHeader) + "1,Room-1,60,-1\n", 2));                      // negative
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "shelters.csv",
         std::string(kSheltersHeader) + "1,Room-1,-60,0\n", 2));                      // negative capacity
-    ASSERT_TRUE(badFileFailsAt(store, good, dir, "shelters.csv",
-        std::string(kSheltersHeader) + "1,Room-1,60,4\n" + "1,Tent-1,40,3\n", 3));   // 7 placed > camp's 6
+    // The model never keeps shelters and head-count in lockstep (release() does
+    // not vacate a shelter), so shelters holding more than the camp must LOAD.
+    {
+        saveWorld(store, good);
+        writeFile(dir, "shelters.csv", std::string(kSheltersHeader) + "1,Room-1,60,40\n" +
+                  "1,Tent-1,40,30\n");
+        World lax;
+        loadWorld(store, lax);
+        ASSERT_EQ(lax.camps.findById(1)->shelterAt(0).getOccupancy(), 40);
+        ASSERT_EQ(lax.camps.findById(1)->shelterAt(1).getOccupancy(), 30);
+        ASSERT_EQ(lax.camps.findById(1)->getOccupancy(), 6);
+    }
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "shelters.csv",
         std::string(kSheltersHeader) + "1,Room-1,60\n", 2));                         // too few
 
     // stock.csv
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "stock.csv",
         std::string(kStockHeader) + "1,Rice,10\n" + "1,Gold,5\n", 3));               // unknown item
+    ASSERT_TRUE(badFileFailsAt(store, good, dir, "stock.csv",
+        std::string(kStockHeader) + "1,Rice,10\n" + "2,Rice,10\n" + "1,Rice,11\n", 4));   // duplicate row
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "stock.csv",
         std::string(kStockHeader) + "1,Rice,-5\n", 2));                              // negative quantity
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "stock.csv",
@@ -681,32 +708,32 @@ void run_csv_tests() {
         std::string(kFamiliesHeader) + "1,Head,Village\n", 2));
 
     // members.csv
-    const std::string m1 = "901,1,ADULT,Bipul Das,35,M,0,0,0,,\n";
+    const std::string m1 = "901,1,ADULT,Bipul Das,35,M,0,0,0,,,\n";
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + m1 + "902,1,ROBOT,Rob,3,M,0,0,0,,\n", 3));
+        std::string(kMembersHeader) + m1 + "902,1,ROBOT,Rob,3,M,0,0,0,,,\n", 3));
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + m1 + "901,1,ADULT,Same Id,3,M,0,0,0,,\n", 3));   // duplicate person id         // unknown tag
+        std::string(kMembersHeader) + m1 + "901,1,ADULT,Same Id,3,M,0,0,0,,,\n", 3));   // duplicate person id         // unknown tag
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "903,1,VOLUNTEER,Vol,30,M,0,0,0,Cook,Day\n", 2));  // not a family member
+        std::string(kMembersHeader) + "903,1,VOLUNTEER,Vol,30,M,0,0,0,Cook,Day,\n", 2));  // not a family member
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,35,M,yes,0,0,,\n", 2));     // bad flag
+        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,35,M,yes,0,0,,,\n", 2));     // bad flag
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,35,X,0,0,0,,\n", 2));       // bad sex
+        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,35,X,0,0,0,,,\n", 2));       // bad sex
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,old,M,0,0,0,,\n", 2));      // bad age
+        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,old,M,0,0,0,,,\n", 2));      // bad age
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,-3,M,0,0,0,,\n", 2));       // negative age
+        std::string(kMembersHeader) + "903,1,ADULT,Bipul Das,-3,M,0,0,0,,,\n", 2));       // negative age
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + "903,99,ADULT,Bipul Das,35,M,0,0,0,,\n", 2));      // unknown family
+        std::string(kMembersHeader) + "903,99,ADULT,Bipul Das,35,M,0,0,0,,,\n", 2));      // unknown family
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "members.csv",
-        std::string(kMembersHeader) + m1 + "902,1,ADULT,Two,35,M,0,0,0,,\n" + "903,1,ADULT,Short row\n", 4));          // too few fields
+        std::string(kMembersHeader) + m1 + "902,1,ADULT,Two,35,M,0,0,0,,,\n" + "903,1,ADULT,Short row\n", 4));          // too few fields
 
     // A member may not reuse an outside volunteer's person id either.
     {
         saveWorld(store, good);
         int volunteerId = good.volunteers.at(0)->getId();
         writeFile(dir, "members.csv", std::string(kMembersHeader) + intStr(volunteerId) +
-                  ",1,ADULT,Clash,35,M,0,0,0,,\n");
+                  ",1,ADULT,Clash,35,M,0,0,0,,,\n");
         ASSERT_TRUE(failsAt(store, "members.csv", 2));
     }
 
@@ -737,6 +764,16 @@ void run_csv_tests() {
         std::string(kDistHeader) + "1,1,2026-07-14,1,1,1,1,1,1,x\n", 2));            // bad quantity
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "distributions.csv",
         std::string(kDistHeader) + "1,1,2026-07-14,1,1,1,1,1,1,-1\n", 2));           // negative quantity
+
+    // Ids in the logs must be positive: 0 usually means a shifted column.
+    ASSERT_TRUE(badFileFailsAt(store, good, dir, "distributions.csv",
+        std::string(kDistHeader) + "0,1,2026-07-14" + zeros, 2));
+    ASSERT_TRUE(badFileFailsAt(store, good, dir, "distributions.csv",
+        std::string(kDistHeader) + "1,-1,2026-07-14" + zeros, 2));
+    ASSERT_TRUE(badFileFailsAt(store, good, dir, "stock_txns.csv",
+        std::string(kTxnHeader) + "0,Rice,5,1,2026-07-14,note\n", 2));
+    ASSERT_TRUE(badFileFailsAt(store, good, dir, "health.csv",
+        std::string(kHealthHeader) + "0,2026-07-14,Fever,3\n", 2));
 
     // stock_txns.csv
     ASSERT_TRUE(badFileFailsAt(store, good, dir, "stock_txns.csv",
@@ -779,6 +816,7 @@ void run_csv_tests() {
         writeFile(dir, "families.csv", kFamiliesHeader);          // header only
         writeFile(dir, "members.csv", kMembersHeader);
         World win;
+        Camp::resetIdCounter(1);                                   // a fresh session
         loadWorld(store, win);
         ASSERT_EQ(win.camps.size(), 2);
         ASSERT_STR_EQ(win.camps.findById(5)->getName(), "Windows Camp");
@@ -787,6 +825,11 @@ void run_csv_tests() {
         ASSERT_NEAR(win.camps.findById(5)->getStock().get(Item::Rice), 12.5, 1e-9);
         ASSERT_EQ(win.families.size(), 0);
         ASSERT_EQ(Camp::generateId(), 7);                          // counter follows the loaded ids
+        // ... and never moves backwards past ids already handed out.
+        Camp::resetIdCounter(500);
+        World again;
+        loadWorld(store, again);
+        ASSERT_TRUE(Camp::generateId() >= 500);
     }
     {
         // A quoted field may span lines, so a name with a newline is not lost.
@@ -823,6 +866,93 @@ void run_csv_tests() {
         ASSERT_EQ(again.camps.size(), 0);
         ASSERT_EQ(again.families.size(), 0);
         ASSERT_EQ(again.log.size(), 0);
+    }
+
+    // The app's own state: admit, place 4 in a shelter, release the family.
+    // Camp holds 0 while the shelter still says 4. It must save and load.
+    {
+        Person::resetIdCounter(1);
+        Family::resetIdCounter(1);
+        Camp::resetIdCounter(1);
+        World used;
+        Built ub = buildWorld(used, today);
+        ub.school->release(*ub.family);
+        ASSERT_EQ(ub.school->getOccupancy(), 0);
+        ASSERT_EQ(ub.school->shelterAt(0).getOccupancy(), 4);
+        saveWorld(store, used);
+        World back;
+        loadWorld(store, back);
+        ASSERT_EQ(back.camps.findById(ub.school->getId())->getOccupancy(), 0);
+        ASSERT_EQ(back.camps.findById(ub.school->getId())->shelterAt(0).getOccupancy(), 4);
+    }
+
+    // A save over existing files leaves no .bak or .tmp behind.
+    for (int i = 0; i < 9; i++) {
+        std::ifstream bak((dir + "/" + kFileNames[i] + ".bak").c_str());
+        std::ifstream tmp((dir + "/" + kFileNames[i] + ".tmp").c_str());
+        ASSERT_FALSE(bak.is_open());
+        ASSERT_FALSE(tmp.is_open());
+    }
+
+    // --- CsvReader framing, on its own ---
+    {
+        const std::string name = "reader_probe.csv";
+        const std::string full = dir + "/" + name;
+        std::vector<std::string> row;
+
+        // CRLF, BOM, blank lines, and a missing final newline.
+        writeFile(dir, name, std::string("\xEF\xBB\xBF") + "a,b\r\n1,2\r\n\r\n3,4");
+        {
+            CsvReader r(full, name, 2);
+            ASSERT_TRUE(r.isOpen());
+            ASSERT_TRUE(r.next(row));
+            ASSERT_STR_EQ(row[0], "1");
+            ASSERT_STR_EQ(row[1], "2");
+            ASSERT_EQ(r.line(), 2);
+            ASSERT_TRUE(r.next(row));
+            ASSERT_STR_EQ(row[1], "4");                 // no trailing \r, no newline needed
+            ASSERT_EQ(r.line(), 4);                     // the blank line still counts
+            ASSERT_FALSE(r.next(row));
+        }
+
+        // A quoted field spanning lines is one record, numbered by its first line.
+        writeFile(dir, name, "a,b\n1,\"x\ny\nz\"\n2,3\n");
+        {
+            CsvReader r(full, name, 2);
+            ASSERT_TRUE(r.next(row));
+            ASSERT_STR_EQ(row[1], "x\ny\nz");
+            ASSERT_EQ(r.line(), 2);
+            ASSERT_TRUE(r.next(row));
+            ASSERT_EQ(r.line(), 5);
+        }
+
+        // Wrong header width, wrong row width, and an unclosed quote name the line.
+        writeFile(dir, name, "a,b,c\n");
+        ASSERT_THROWS(CsvReader(full, name, 2), FileFormatException);
+        writeFile(dir, name, "a,b\n1,2,3\n");
+        {
+            CsvReader r(full, name, 2);
+            ASSERT_THROWS(r.next(row), FileFormatException);
+            ASSERT_EQ(r.line(), 2);
+        }
+        writeFile(dir, name, "a,b\n1,\"never closed\n");
+        {
+            CsvReader r(full, name, 2);
+            bool caught = false;
+            try {
+                r.next(row);
+            } catch (const FileFormatException& e) {
+                caught = true;
+                ASSERT_EQ(e.getLine(), 2);
+            }
+            ASSERT_TRUE(caught);
+        }
+
+        // Missing file: not open, nothing read.
+        std::remove(full.c_str());
+        CsvReader missing(full, name, 2);
+        ASSERT_FALSE(missing.isOpen());
+        ASSERT_FALSE(missing.next(row));
     }
 
     // A partial data directory loads what it has: a missing file is not an error.
