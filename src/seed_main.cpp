@@ -25,6 +25,29 @@
 // given as the first argument). Everything is fixed, not random, so the demo
 // behaves identically every time.
 //
+// Composition rules (family number n is one-based, i = n - 1):
+//  - Camps: families 1-16 at camp 1, 17-30 at camp 2, 31-40 at camp 3.
+//  - Every family has 1 or 2 adults. The second adult is present in every
+//    second family, and always when the family needs one (see below).
+//  - Every third family has an infant. The brief leaves family 9 (a lactating
+//    mother) without one, so a lactating family is FORCED to have an infant.
+//  - Every second family has one child; only every tenth family (even AND
+//    divisible by five) has a second child, so "every second family has one or
+//    two children" holds.
+//  - Every fourth family has an elderly member.
+//  - Pregnant (4, 11, 19, 27, 35) and lactating (9, 22) flags land on a SECOND
+//    adult, who is female. That second adult is forced to exist for those
+//    families. The disabled flag (7, 16, 29) is on the head of household.
+//  - Families 5, 14, 23, 31 have a ResidentVolunteer as their second adult.
+//    A ResidentVolunteer belongs to its Family and never to Registry<Volunteer>.
+//  - Camp 2 must be nearly full from REGISTERED families alone, so its 14
+//    families (about 6 people each) carry 3 or 4 extra children each. Only the
+//    number of Child members grows; no other member type is changed, so the
+//    age bands and ration norms stay honest. Together they hold 88 of 90, which
+//    leaves 2 free: no family can be admitted.
+//  - Families are spread over a camp's shelters (the emptiest shelter by
+//    fraction filled that still has room), so several rooms show in use.
+//
 // The figures the demo depends on are rigged through QUANTITIES only. A camp's
 // daily demand is never typed in: stock.csv stores quantities, and the loader
 // recomputes demand from the families. So this program asks CsvStore for the
@@ -99,7 +122,7 @@ static Date checkedDate(int y, int m, int d) {
 }
 
 // Builds family number i (zero-based) following the fixed composition cycle.
-static std::unique_ptr<Family> buildFamily(int i, int campId) {
+static std::unique_ptr<Family> buildFamily(int i, int campId, int extraChildren) {
     int n = i + 1;                                   // the brief numbers families from one
     std::string head = HEAD_NAMES[i];
     std::string surname = surnameOf(head);
@@ -157,6 +180,12 @@ static std::unique_ptr<Family> buildFamily(int i, int campId) {
         }
     }
 
+    // Extra children, used only to make camp 2's families a realistic size.
+    for (int k = 0; k < extraChildren; k++) {
+        std::string name = std::string(CHILD_NAMES[(i + 2 * k + 1) % 8]) + " " + surname;
+        f->addMember(new Child(name, 3 + (i + k) % 10, (k % 2 == 0) ? 'F' : 'M', fid, campId));
+    }
+
     // Every fourth family has an elderly member.
     if (i % 4 == 0) {
         char sex = (i % 8 == 0) ? 'M' : 'F';
@@ -169,9 +198,26 @@ static std::unique_ptr<Family> buildFamily(int i, int campId) {
 // Places a whole family in one shelter and records the placement on every
 // resident. Camp::occupancy, the shelter's occupancy and each resident's
 // shelterLabel all describe the same people, so they are updated together.
+// Picks the shelter with the lowest fraction filled that can still take the
+// whole family, so the families spread over the rooms. -1 when none can.
+static int chooseShelter(const Camp& camp, int people) {
+    int best = -1;
+    double bestFill = 2.0;
+    for (int s = 0; s < camp.shelterCount(); s++) {
+        const Camp::Shelter& sh = camp.shelterAt(s);
+        if (!sh.hasRoom(people)) continue;
+        double fill = static_cast<double>(sh.getOccupancy()) / sh.getCapacity();
+        if (fill < bestFill) {
+            bestFill = fill;
+            best = s;
+        }
+    }
+    return best;
+}
+
 static void placeFamily(Camp& camp, Family& f) {
     int people = f.size();
-    int shelterIndex = camp.findShelterFor(people);
+    int shelterIndex = chooseShelter(camp, people);
     if (shelterIndex < 0) {
         throw std::logic_error("no shelter in " + camp.getName() + " can hold family " + f.getHeadName());
     }
@@ -224,33 +270,19 @@ int main(int argc, char** argv) {
             } else if (i >= 16) {
                 camp = camp2;
             }
-            std::unique_ptr<Family> f = buildFamily(i, camp->getId());
+            std::unique_ptr<Family> f = buildFamily(i, camp->getId(), camp->getId() == 2 ? 3 + (i - 16 < 6 ? 1 : 0) : 0);
             placeFamily(*camp, *f);
             families.add(std::move(f));
         }
 
-        // 4. Top camp 2 up to within 2 of capacity with unregistered walk-ins.
-        // They are real people in real shelter space, so the shelter counters
-        // move together with the camp's head-count.
-        int walkIns = 0;
-        while (camp2->freeSpace() > 2) {
-            int shelterIndex = camp2->findShelterFor(1);
-            if (shelterIndex < 0) break;
-            ++(*camp2);
-            camp2->shelterAt(shelterIndex).occupy(1);
-            walkIns++;
-        }
-        std::cout << "Camp 2 also holds " << walkIns
-                  << " unregistered walk-ins awaiting registration.\n";
-
-        // 5. The four outside volunteers.
+        // 4. The four outside volunteers.
         for (int v = 0; v < 4; v++) {
             const VolunteerRow& row = OUTSIDE_VOLUNTEERS[v];
             volunteers.add(std::unique_ptr<Volunteer>(new Volunteer(
                 row.name, row.age, row.sex, row.skill, row.shift, row.organisation)));
         }
 
-        // 6. Stock QUANTITIES. Ask CsvStore for the demand the loader will
+        // 5. Stock QUANTITIES. Ask CsvStore for the demand the loader will
         // derive, then set quantity = days x demand for each item.
         CsvStore::deriveDailyDemand(camps, families);
         Date allocationDay = checkedDate(2026, 7, 12);
@@ -268,14 +300,14 @@ int main(int argc, char** argv) {
                     quantity = days * perDay;
                 }
                 camp->stockRef().set(item, quantity);
-                // 9. One ledger line per camp per item. loadTxn records the
+                // 8. One ledger line per camp per item. loadTxn records the
                 // line without touching the stock set above.
                 ledger.loadTxn(StockTxn(camp->getId(), item, quantity, true,
                                         allocationDay, "initial district allocation"));
             }
         }
 
-        // 7. A full round at camps 1 and 3 on the day before the demo.
+        // 6. A full round at camps 1 and 3 on the day before the demo.
         // Nothing at all is recorded for the demo date.
         for (int i = 0; i < families.size(); i++) {
             const Family* f = families.at(i);
@@ -284,13 +316,13 @@ int main(int argc, char** argv) {
             }
         }
 
-        // 8. Health register. Camp 2 sits at 7 diarrhoea cases, below 10.
+        // 7. Health register. Camp 2 sits at 7 diarrhoea cases, below 10.
         health.logCase(2, allocationDay, Symptom::Diarrhoea, 3);
         health.logCase(2, lastRound, Symptom::Diarrhoea, 4);
         health.logCase(1, lastRound, Symptom::Fever, 2);
         health.logCase(3, lastRound, Symptom::SkinInfection, 1);
 
-        // 10. Save through the real store and print the summary.
+        // 9. Save through the real store and print the summary.
         CsvStore store(dir);
         store.saveAll(camps, families, volunteers, log, ledger, health);
 

@@ -119,9 +119,15 @@ void run_seed_tests() {
     ASSERT_EQ(disabled, 3);
     ASSERT_EQ(lactating, 2);
     ASSERT_EQ(residentVolunteers, 4);
-    // Registered residents never exceed the camp head-count.
+    // Every occupant is a registered family member: no hidden head-count.
     for (int c = 1; c <= 3; c++) {
-        ASSERT_TRUE(campHeads[c] <= camps.findById(c)->getOccupancy());
+        ASSERT_EQ(campHeads[c], camps.findById(c)->getOccupancy());
+        // Families are spread: more than one shelter is in use.
+        int used = 0;
+        for (int s = 0; s < camps.findById(c)->shelterCount(); s++) {
+            if (camps.findById(c)->shelterAt(s).getOccupancy() > 0) used++;
+        }
+        ASSERT_TRUE(used >= 2);
     }
 
     // --- outside volunteers; a ResidentVolunteer is never in the registry ---
@@ -147,6 +153,15 @@ void run_seed_tests() {
     // Demo step 3: camp 2 is nearly full.
     ASSERT_TRUE(c2->freeSpace() <= 2);
     ASSERT_TRUE(c2->freeSpace() >= 0);
+    ASSERT_EQ(c2->getOccupancy(), 88);
+    // No camp 2 family is small enough to fit in what is left, so admitting
+    // one is refused. Camp 2 families are about six people each.
+    for (int i = 0; i < families.size(); i++) {
+        if (families.at(i)->getCampId() == 2) {
+            ASSERT_TRUE(families.at(i)->size() >= 5);
+            ASSERT_TRUE(families.at(i)->size() > c2->freeSpace());
+        }
+    }
 
     // Demo step 5: camp 2's rice is about 2 days and is its worst item.
     double rice2 = c2->getStock().daysOfSupplyFor(Item::Rice);
