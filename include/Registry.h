@@ -10,7 +10,7 @@
 //
 // T must provide `int getId() const`.
 //
-// Ownership note: this uses std::unique_ptr, while Family in Task 8 owns its
+// Ownership note: this uses std::unique_ptr, while `Family` owns its
 // members with raw new/delete. Both styles are in the project on purpose, so
 // the manual version can be compared with the automatic one.
 template <typename T>

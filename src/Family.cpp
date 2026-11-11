@@ -19,7 +19,7 @@ Family::Family(const std::string& headName, const std::string& village)
 
 // Note: the copy keeps the family id (it is the same family on paper), but
 // Person's copy constructor mints fresh ids, so the cloned members are renumbered.
-// Task 19's CSV loading uses adoptId on construction rather than cloning.
+// CsvStore's loader uses adoptId on construction rather than cloning.
 Family::Family(const Family& other)
     : id(other.id), headName(other.headName), village(other.village),
       campId(other.campId), members(0), count(0), capacity(0) {

@@ -18,7 +18,7 @@ class RationCard;   // only the name is needed here; Family.cpp includes the def
 // [Array of dynamic objects]
 // Family owns its members through a raw Person** array that it grows itself.
 // A std::vector<std::unique_ptr<Person>> would be the modern choice - Registry<T>
-// in Task 10 shows that style - but owning raw memory here is what makes the
+// shows that style - but owning raw memory here is what makes the
 // rule of three below necessary and visible.
 class Family {
     // [Static data member]
@@ -73,7 +73,7 @@ public:
     Ration dailyRation() const;
     int vulnerabilityScore() const;
 
-    // Metric functions for [Pointer to member function] sorting in Task 15.
+    // Metric functions for [Pointer to member function] sorting through FamilySorter.
     // They all share one signature, which is the whole point.
     double metricVulnerability() const;
     double metricSize() const;
