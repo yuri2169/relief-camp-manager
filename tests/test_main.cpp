@@ -17,6 +17,7 @@ void run_ledger_tests();
 void run_transfer_tests();
 void run_health_tests();
 void run_report_tests();
+void run_csv_tests();
 
 int main() {
     std::cout << "Relief Camp Manager - test suite\n";
@@ -36,5 +37,6 @@ int main() {
     run_transfer_tests();
     run_health_tests();
     run_report_tests();
+    run_csv_tests();
     return testing::summary();
 }
