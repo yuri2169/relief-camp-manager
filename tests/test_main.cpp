@@ -4,11 +4,13 @@
 void run_runner_selftest();
 void run_date_tests();
 void run_ration_tests();
+void run_person_tests();
 
 int main() {
     std::cout << "Relief Camp Manager - test suite\n";
     run_runner_selftest();
     run_date_tests();
     run_ration_tests();
+    run_person_tests();
     return testing::summary();
 }
