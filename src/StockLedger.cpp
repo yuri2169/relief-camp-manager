@@ -1,5 +1,6 @@
 #include "StockLedger.h"
 #include "Camp.h"
+#include <cmath>
 #include <stdexcept>
 
 // ---------------------------------------------------------------- StockTxn
@@ -31,9 +32,9 @@ std::ostream& operator<<(std::ostream& os, const StockTxn& t) {
 
 StockLedger::StockLedger() {}
 
-// Written as "!(q > 0)" so that NaN is refused as well.
+// Written as "!(q > 0)" so that NaN is refused too; isfinite refuses infinity.
 static void requirePositive(double quantity) {
-    if (!(quantity > 0.0)) {
+    if (!(quantity > 0.0) || !std::isfinite(quantity)) {
         throw std::invalid_argument("stock quantity must be above zero");
     }
 }

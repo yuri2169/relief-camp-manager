@@ -79,8 +79,14 @@ std::vector<Item> TransferAdvisor::criticalItems(const Camp& camp) const {
 std::vector<TransferSuggestion> TransferAdvisor::suggest(const std::vector<Camp*>& camps) const {
     std::vector<TransferSuggestion> result;
 
+    // How much of each camp's stock has already been promised to an earlier
+    // receiver during this call, indexed by camp * ITEM_COUNT + item. Without
+    // it, one donor's spare could be handed out to several receivers.
+    std::vector<double> promised(camps.size() * ITEM_COUNT, 0.0);
+
     for (size_t t = 0; t < camps.size(); t++) {
         const Camp* to = camps[t];
+        if (to == nullptr) continue;                    // skip null entries
         for (int i = 0; i < ITEM_COUNT; i++) {
             Item item = itemAt(i);
             double toDays = to->getStock().daysOfSupplyFor(item);
@@ -90,30 +96,38 @@ std::vector<TransferSuggestion> TransferAdvisor::suggest(const std::vector<Camp*
             double needed = criticalDays * toDemand - to->getStock().get(item);
             if (needed <= kEpsilon) continue;
 
+            // Threshold convention: a camp exactly at criticalDays counts as
+            // critical for criticalItems() (reporting, "<="), but as satisfied
+            // here, because needed reaches ~0 once the camp holds criticalDays
+            // of stock. So after a transfer is applied the two methods differ.
             // Pick the donor with the most days of supply.
             const Camp* best = nullptr;
             double bestDays = 0.0;
             double bestSpare = 0.0;
+            size_t bestIndex = 0;
             for (size_t f = 0; f < camps.size(); f++) {
                 const Camp* from = camps[f];
-                if (from == to) continue;
+                if (from == nullptr || from == to) continue;
                 // A donor must really consume the item: 999 days for a camp
                 // with no demand means "unknown", not "plenty to spare".
                 if (!hasDemandFor(*from, item)) continue;
                 double fromDays = from->getStock().daysOfSupplyFor(item);
                 if (fromDays <= surplusDays) continue;
                 double fromDemand = from->getStock().getDailyDemand().get(item);
-                double spare = from->getStock().get(item) - surplusDays * fromDemand;
+                double spare = from->getStock().get(item) - surplusDays * fromDemand
+                             - promised[f * ITEM_COUNT + i];   // already promised
                 if (spare <= kEpsilon) continue;
                 if (fromDays > bestDays) {
                     best = from;
                     bestDays = fromDays;
                     bestSpare = spare;
+                    bestIndex = f;
                 }
             }
 
             if (best != nullptr) {
                 double quantity = needed < bestSpare ? needed : bestSpare;
+                promised[bestIndex * ITEM_COUNT + i] += quantity;
                 result.push_back(TransferSuggestion(best->getId(), best->getName(),
                                                     to->getId(), to->getName(),
                                                     item, quantity, bestDays, toDays));

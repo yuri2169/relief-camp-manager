@@ -45,6 +45,7 @@ public:
 // caller keeps them), and the pointers are only used during the call. A
 // pointer taken from a Registry stops being valid once that registry removes
 // or clears the camp, so do not keep the vector around.
+// Null entries in the vector are skipped.
 class TransferAdvisor {
     double criticalDays;    // at or below this, a camp is in trouble
     double surplusDays;     // above this, a camp can afford to give

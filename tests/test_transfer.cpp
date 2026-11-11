@@ -4,6 +4,7 @@
 #include "Camp.h"
 #include "RationNorms.h"
 #include "Exceptions.h"
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -189,12 +190,48 @@ void run_transfer_tests() {
     ASSERT_TRUE(line.find("Move 120 kg of Rice from Richer Donor (#") != std::string::npos);
     ASSERT_TRUE(line.find("30.0 days") != std::string::npos);
     ASSERT_TRUE(line.find("to Dry Camp (#") != std::string::npos);
-    ASSERT_TRUE(line.find("0.0 days") != std::string::npos);
+    ASSERT_TRUE(line.find(", 0.0 days)") != std::string::npos);
 
     // A nonsense quantity is refused before it touches the stock.
     ASSERT_THROWS(ledger.stockIn(richCamp, Item::Rice, -5.0, today, "bad"), std::invalid_argument);
     ASSERT_THROWS(ledger.stockOut(richCamp, Item::Rice, 0.0, today, "bad"), std::invalid_argument);
     ASSERT_EQ(ledger.size(), 0);
+
+    // Rejected quantities leave the stock and the log untouched.
+    double before = richCamp.getStock().get(Item::Rice);
+    double nan = std::numeric_limits<double>::quiet_NaN();
+    double inf = std::numeric_limits<double>::infinity();
+    ASSERT_THROWS(ledger.stockIn(richCamp, Item::Rice, nan, today, "bad"), std::invalid_argument);
+    ASSERT_THROWS(ledger.stockIn(richCamp, Item::Rice, inf, today, "bad"), std::invalid_argument);
+    ASSERT_THROWS(ledger.stockOut(richCamp, Item::Rice, nan, today, "bad"), std::invalid_argument);
+    ASSERT_THROWS(ledger.stockOut(richCamp, Item::Rice, inf, today, "bad"), std::invalid_argument);
+    ASSERT_NEAR(richCamp.getStock().get(Item::Rice), before, 1e-9);
+    ASSERT_EQ(ledger.size(), 0);
+
+    // One donor, two receivers: the donor's spare must not be promised twice.
+    Camp donor("Shared Donor", "Morigaon", 100);
+    donor.stockRef().setDailyDemand(demand);
+    donor.stockRef().set(Item::Rice, 460.0);            // 11.5 days, spare 180 kg
+    Camp dry1("Dry One", "Morigaon", 100);
+    dry1.stockRef().setDailyDemand(demand);             // rice 0, needs 120 kg
+    Camp dry2("Dry Two", "Morigaon", 100);
+    dry2.stockRef().setDailyDemand(demand);
+    std::vector<Camp*> shared;
+    shared.push_back(&dry1);
+    shared.push_back(&dry2);
+    shared.push_back(&donor);
+    std::vector<TransferSuggestion> two = advisor.suggest(shared);
+    ASSERT_EQ(static_cast<int>(two.size()), 2);
+    ASSERT_NEAR(two[0].getQuantity(), 120.0, 1e-9);     // first receiver in full
+    ASSERT_NEAR(two[1].getQuantity(), 60.0, 1e-9);      // second gets the rest
+    ASSERT_EQ(two[0].getToCampId(), dry1.getId());
+    ASSERT_EQ(two[1].getToCampId(), dry2.getId());
+    double total = two[0].getQuantity() + two[1].getQuantity();
+    ASSERT_TRUE(total <= 460.0 - 7.0 * 40.0 + 1e-9);
+
+    // Null entries are skipped rather than dereferenced.
+    shared.push_back(nullptr);
+    ASSERT_EQ(static_cast<int>(advisor.suggest(shared).size()), 2);
 
     Camp::resetIdCounter(1);
 }
