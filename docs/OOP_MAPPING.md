@@ -74,9 +74,10 @@ unmapped.
 ## Compiler evidence that these constructs are load-bearing
 
 Two constructs were removed on purpose, and the compiler's real output was
-captured. **Both outputs below are Apple clang's wording.** This machine's `g++`
-is Apple clang. No GNU g++ or MinGW build has been exercised in this project, so
-no g++ error text is shown or claimed.
+captured. **Both outputs below are Apple clang's wording**; the error text from
+GNU g++ differs and is not shown. The project itself has been built and tested
+with GNU g++ 15.2.0 (see `docs/VERIFICATION.md`), but no MinGW/Windows build has
+been exercised.
 
 **Virtual base (`virtual` removed from `Resident` and `Volunteer`):**
 

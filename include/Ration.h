@@ -13,7 +13,7 @@ public:
     Ration(int persons);
     explicit Ration(const double* table);      // build from a RationNorms table
     // [Copy constructor]
-    Ration(const Ration& other);
+    Ration(const Ration& other); Ration& operator=(const Ration&) = default;   // + assignment, for GCC -Wdeprecated-copy
     ~Ration();
 
     // [Const member function]

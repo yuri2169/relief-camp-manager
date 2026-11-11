@@ -13,7 +13,7 @@ class Date {
 public:
     Date();                                // 1970-01-01
     Date(int year, int month, int day);    // parameterised
-    Date(const Date& other);               // copy constructor
+    Date(const Date& other); Date& operator=(const Date&) = default;   // copy constructor (+ assignment, for GCC -Wdeprecated-copy)
     ~Date();
 
     // [Const member functions]

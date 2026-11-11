@@ -49,9 +49,11 @@ been distributed yet on the demo date, 2026-07-14.
 
 ## Platform
 
-Built and tested with **Apple clang on macOS** only. The Makefile and
-CMakeLists.txt are written to be portable to Linux g++ and Windows MinGW, but
-**those builds have not been exercised**.
+Built and tested on macOS with **Apple clang 21** (Makefile and CMake) and with
+**GNU g++ 15.2.0** (Homebrew), which builds warning-free and passes the full
+suite. The Makefile and CMakeLists.txt are written to be portable to Linux and
+Windows MinGW, but **MinGW/Windows has not been exercised**, and neither has a
+Linux machine. See `docs/VERIFICATION.md` for the recorded output.
 
 ## Documentation
 
