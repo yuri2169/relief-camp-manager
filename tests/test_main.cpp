@@ -11,6 +11,7 @@ void run_registry_tests();
 void run_exception_tests();
 void run_stock_tests();
 void run_camp_tests();
+void run_distribution_tests();
 
 int main() {
     std::cout << "Relief Camp Manager - test suite\n";
@@ -24,5 +25,6 @@ int main() {
     run_exception_tests();
     run_stock_tests();
     run_camp_tests();
+    run_distribution_tests();
     return testing::summary();
 }
