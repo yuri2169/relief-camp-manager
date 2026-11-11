@@ -1,0 +1,9 @@
+campId,label,capacity,occupancy
+1,Room-1,50,48
+1,Room-2,50,0
+1,Hall-A,80,0
+2,Hall-B,60,60
+2,Tent-1,30,28
+3,Tent-A,40,29
+3,Tent-B,40,0
+3,Tent-C,40,0

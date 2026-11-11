@@ -19,6 +19,7 @@ void run_health_tests();
 void run_report_tests();
 void run_csv_tests();
 void run_autosave_tests();
+void run_seed_tests();
 
 int main() {
     std::cout << "Relief Camp Manager - test suite\n";
@@ -40,5 +41,6 @@ int main() {
     run_report_tests();
     run_csv_tests();
     run_autosave_tests();
+    run_seed_tests();
     return testing::summary();
 }
