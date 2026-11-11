@@ -6,7 +6,7 @@
 #include <string>
 #include <ostream>
 
-class RationCard;   // Task 9 adds the conversion operator
+class RationCard;   // only the name is needed here; Family.cpp includes the definition
 
 // A displaced household: the unit that gets registered, admitted and rationed.
 //
@@ -79,6 +79,11 @@ public:
     double metricSize() const;
     double metricAverageAge() const;
     double metricInfantCount() const;
+
+    // [Class to class conversion] a Family converts to the printable card an
+    // official hands over. RationCard is only forward-declared above; the
+    // definition lives in Family.cpp, which includes RationCard.h.
+    operator RationCard() const;
 
     // [Friend functions]
     friend bool operator<(const Family& a, const Family& b);   // by vulnerability

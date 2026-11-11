@@ -1,4 +1,5 @@
 #include "Family.h"
+#include "RationCard.h"
 #include "Debug.h"
 #include <stdexcept>
 
@@ -183,4 +184,12 @@ std::ostream& operator<<(std::ostream& os, const Family& f) {
     os << "Family #" << f.id << " " << f.headName << " (" << f.village << "), "
        << f.count << " members, vulnerability " << f.vulnerabilityScore();
     return os;
+}
+
+Family::operator RationCard() const {
+    return RationCard(id, headName, campId, count,
+                      countOfTag("INFANT"), countOfTag("CHILD"),
+                      countOfTag("ADULT") + countOfTag("RESIDENT_VOLUNTEER"),
+                      countOfTag("ELDERLY"),
+                      dailyRation(), vulnerabilityScore());
 }

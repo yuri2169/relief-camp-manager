@@ -4,6 +4,7 @@
 #include "Child.h"
 #include "Adult.h"
 #include "Elderly.h"
+#include "RationCard.h"
 #include <sstream>
 #include <stdexcept>
 
@@ -175,6 +176,51 @@ void run_family_tests() {
         f2.addMember(nullptr);
         ASSERT_EQ(f2.size(), 0);
     }
+
+    Person::resetIdCounter(1);
+    Family::resetIdCounter(1);
+
+    testing::beginSuite("Family to RationCard conversion");
+
+    Person::resetIdCounter(1);
+    Family::resetIdCounter(500);
+
+    Family card_family = makeDasFamily();
+    card_family.setCampId(3);
+
+    // [Class to class conversion] implicit, on assignment to a RationCard.
+    RationCard card = card_family;
+    ASSERT_EQ(card.getFamilyId(), card_family.getId());
+    ASSERT_STR_EQ(card.getHeadName(), "Bipul Das");
+    ASSERT_EQ(card.getCampId(), 3);
+    ASSERT_EQ(card.getMemberCount(), 5);
+    ASSERT_EQ(card.getInfants(), 1);
+    ASSERT_EQ(card.getChildren(), 1);
+    ASSERT_EQ(card.getAdults(), 2);
+    ASSERT_EQ(card.getElderly(), 1);
+    ASSERT_EQ(card.getVulnerability(), 115);
+    ASSERT_NEAR(card.getDaily().get(Item::Rice), 1.300, 1e-9);
+
+    // The same conversion works explicitly, which is how the menu uses it.
+    RationCard explicitCard = static_cast<RationCard>(card_family);
+    ASSERT_EQ(explicitCard.getMemberCount(), 5);
+
+    // Default constructor gives an empty card.
+    RationCard blankCard;
+    ASSERT_EQ(blankCard.getFamilyId(), 0);
+    ASSERT_EQ(blankCard.getMemberCount(), 0);
+
+    // render() produces the demo-facing card text.
+    std::string text = card.render();
+    ASSERT_TRUE(text.find("RATION CARD") != std::string::npos);
+    ASSERT_TRUE(text.find("Bipul Das") != std::string::npos);
+    ASSERT_TRUE(text.find("Rice") != std::string::npos);
+    ASSERT_TRUE(text.find("Vulnerability : 115") != std::string::npos);
+    ASSERT_TRUE(text.find("Rice 1.3 kg") != std::string::npos);
+
+    std::ostringstream cardOss;
+    cardOss << card;
+    ASSERT_TRUE(cardOss.str().find("Bipul Das") != std::string::npos);
 
     Person::resetIdCounter(1);
     Family::resetIdCounter(1);
