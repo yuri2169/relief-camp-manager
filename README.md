@@ -41,8 +41,9 @@ CMake works too:
 about 40 families). A fresh clone runs the demo with no setup. Running
 `make seed` regenerates the files and **overwrites** them.
 
-The data is rigged so the demo has a story. Camp 2 is nearly full and has about
-two days of rice left. Camp 3 is the donor, holding about eighteen days. Diarrhoea
+The data is rigged so the demo has a story. Camp 2 is nearly full (88 of 90) and has about
+two days of rice left. Camp 3 is the donor, holding about eighteen days of rice
+(camp 1 has twelve). Diarrhoea
 cases sit at seven, just under the outbreak threshold of ten, and nothing has
 been distributed yet on the demo date, 2026-07-14.
 
@@ -54,6 +55,8 @@ CMakeLists.txt are written to be portable to Linux g++ and Windows MinGW, but
 
 ## Documentation
 
+- `tools/collect_tags.sh` and `tools/check_mapping.sh` regenerate and verify the
+  tag index behind that mapping (`sh tools/check_mapping.sh` from the root).
 - `docs/OOP_MAPPING.md` maps every syllabus concept to a file and line, with the
   compiler evidence and an honest note on which constructs are taught rather
   than natural.
