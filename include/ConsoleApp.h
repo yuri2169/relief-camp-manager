@@ -32,7 +32,8 @@ class ConsoleApp {
     CsvStore store;
     Autosaver autosaver;
 
-    // Guards every mutation of the registries and logs above. The autosave
+    // Guards every MUTATION of the registries and logs above (reads on the main
+    // thread are unguarded: it is the only writer, and saveAll is const). The autosave
     // thread takes this same mutex before writing, so a save never sees a
     // half-finished change.
     std::mutex dataMutex;

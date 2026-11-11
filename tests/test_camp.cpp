@@ -211,4 +211,16 @@ void run_camp_tests() {
     Person::resetIdCounter(1);
     Family::resetIdCounter(1);
     Camp::resetIdCounter(1);
+
+    // --- findShelterFor: first shelter that holds the whole group ---
+    Camp placing("Placing", "Test", 20);
+    ASSERT_EQ(placing.findShelterFor(1), -1);               // no shelters at all
+    placing.addShelter(Camp::Shelter("S1", 6));
+    placing.addShelter(Camp::Shelter("S2", 4));
+    ASSERT_EQ(placing.findShelterFor(6), 0);                // exact fit
+    ASSERT_EQ(placing.findShelterFor(3), 0);                // first fit wins
+    placing.shelterAt(0).occupy(3);                         // S1 has 3 left, S2 has 4
+    ASSERT_EQ(placing.findShelterFor(4), 1);                // skips the full-ish one
+    ASSERT_EQ(placing.findShelterFor(5), -1);               // camp has 7 free, no single shelter
+    ASSERT_EQ(placing.findShelterFor(7), -1);               // larger than every shelter
 }

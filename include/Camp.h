@@ -79,6 +79,9 @@ public:
 
     void addShelter(const Shelter& s);
     int shelterCount() const;
+    // Index of the first shelter that can hold `people` together, or -1 when
+    // none can (including a camp with no shelters at all).
+    int findShelterFor(int people) const;
     const Shelter& shelterAt(int index) const;   // throws std::out_of_range
     Shelter& shelterAt(int index);
 

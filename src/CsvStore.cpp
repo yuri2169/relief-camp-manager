@@ -709,7 +709,7 @@ void CsvStore::loadHealth(HealthMonitor& health) const {
 
 // A camp's daily demand is what its families eat in a day. It is derived from
 // the people, so it is recomputed here rather than stored.
-static void restoreDemand(Registry<Camp>& camps, const Registry<Family>& families) {
+void CsvStore::deriveDailyDemand(Registry<Camp>& camps, const Registry<Family>& families) {
     for (int i = 0; i < camps.size(); i++) {
         Camp* camp = camps.at(i);
         Ration total;
@@ -750,10 +750,10 @@ void CsvStore::loadAll(Registry<Camp>& camps,
         loadMembers(volunteers, families);
 
         // stock.csv stores quantities only. A camp's daily demand is derived
-        // data: it is recomputed here from the camp's families, exactly as the
-        // menu's refreshDemand does. A hand-set demand that differs from that
+        // data: it is recomputed here from the camp's families, by the same
+        // deriveDailyDemand the menu uses. A hand-set demand that differs from that
         // sum will therefore not survive a reload.
-        restoreDemand(camps, families);
+        deriveDailyDemand(camps, families);
 
         loadDistributions(log);
         loadStockTxns(ledger);

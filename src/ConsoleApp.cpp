@@ -46,7 +46,7 @@ std::string oneDecimal(double value) {
 
 ConsoleApp::ConsoleApp(const std::string& dataDir)
     : store(dataDir), today(2026, 7, 14), running(false),
-      loadFailed(false), lastSaveError(), failuresReported(0) {}
+      loadFailed(true), lastSaveError(), failuresReported(0) {}
 
 ConsoleApp::~ConsoleApp() {
     // Called from the main thread, and WITHOUT dataMutex held: the worker may
@@ -153,6 +153,8 @@ void ConsoleApp::showMainMenu() const {
 
 void ConsoleApp::load() {
     std::lock_guard<std::mutex> lock(dataMutex);
+    // loadFailed starts true and is cleared only on success, so ANY escape
+    // from loadAll (named or not) leaves saving switched off.
     try {
         store.loadAll(camps, families, volunteers, distributions, ledger, health);
         loadFailed = false;
@@ -201,15 +203,7 @@ void ConsoleApp::reportSaveProblems() {
 
 // Caller must hold dataMutex.
 void ConsoleApp::refreshDemand() {
-    std::vector<Camp*> allCamps = camps.all();
-    for (size_t i = 0; i < allCamps.size(); i++) {
-        Ration total;
-        std::vector<Family*> there = familiesAtCamp(allCamps[i]->getId());
-        for (size_t j = 0; j < there.size(); j++) {
-            total += there[j]->dailyRation();
-        }
-        allCamps[i]->stockRef().setDailyDemand(total);
-    }
+    CsvStore::deriveDailyDemand(camps, families);
 }
 
 // ----------------------------------------------------------------- choosers
@@ -282,6 +276,8 @@ void ConsoleApp::suggestAlternativeCamp(const Family& f, int excludeCampId) cons
 
 // ----------------------------------------------------------------- handlers
 
+// Read-only: takes no lock. That is safe only because the main thread is the
+// sole mutator and CsvStore::saveAll is const, so the autosave thread merely reads.
 void ConsoleApp::handleListCamps() {
     std::vector<Camp*> all = camps.all();
     if (all.empty()) {
@@ -351,24 +347,25 @@ void ConsoleApp::handleRegisterFamily() {
         bool disabled = readYesNo("Disabled?");
         bool lactating = readYesNo("Breastfeeding?");
 
-        Person* p = 0;
+        std::unique_ptr<Person> p;
         if (age <= 2) {
-            p = new Infant(name, age, sex, f->getId(), 0);
+            p.reset(new Infant(name, age, sex, f->getId(), 0));
         } else if (age <= 12) {
-            p = new Child(name, age, sex, f->getId(), 0);
+            p.reset(new Child(name, age, sex, f->getId(), 0));
         } else if (age < 60) {
             if (readYesNo("Will they take a camp duty?")) {
                 std::string skill = readLine("Skill (e.g. medic, cook, driver)");
                 std::string shift = readLine("Shift (e.g. morning, evening)");
-                p = new ResidentVolunteer(name, age, sex, f->getId(), 0, skill, shift);
+                p.reset(new ResidentVolunteer(name, age, sex, f->getId(), 0, skill, shift));
             } else {
-                p = new Adult(name, age, sex, f->getId(), 0);
+                p.reset(new Adult(name, age, sex, f->getId(), 0));
             }
         } else {
-            p = new Elderly(name, age, sex, f->getId(), 0);
+            p.reset(new Elderly(name, age, sex, f->getId(), 0));
         }
         p->setFlags(pregnant, disabled, lactating);
-        f->addMember(p);                  // the family owns p from here
+        f->addMember(p.get());            // the family owns the person from here
+        p.release();
         another = readYesNo("Add another member?");
     }
     if (f->size() == 0) {
@@ -397,13 +394,7 @@ void ConsoleApp::handleAdmitFamily() {
     try {
         // Find a shelter for the whole family BEFORE touching the camp, so a
         // refusal leaves the camp-level and shelter-level counts in step.
-        int shelterIndex = -1;
-        for (int i = 0; i < camp->shelterCount(); i++) {
-            if (camp->shelterAt(i).hasRoom(f->size())) {
-                shelterIndex = i;
-                break;
-            }
-        }
+        int shelterIndex = camp->findShelterFor(f->size());
         if (camp->shelterCount() > 0 && shelterIndex < 0 && camp->freeSpace() >= f->size()) {
             std::cout << "\n  REFUSED: no single shelter in " << camp->getName()
                       << " has room for " << f->size() << " people together.\n";
@@ -458,7 +449,7 @@ void ConsoleApp::handleDistribute() {
     }
     int served = 0;
     int blocked = 0;
-    int short_ = 0;
+    int shortOfStock = 0;
     while (!queue.empty()) {
         Family* f = queue.pop();
         Allocation alloc(f->getId(), camp->getId(), today, f->dailyRation());
@@ -478,15 +469,17 @@ void ConsoleApp::handleDistribute() {
             std::cout << "  BLOCKED: " << e.what() << "\n";
         }
         catch (const InsufficientStockException& e) {
-            short_++;
+            shortOfStock++;
             std::cout << "  SHORT: family " << f->getId() << " " << f->getHeadName()
                       << " not served - " << e.what() << "\n";
         }
     }
     std::cout << "Round finished at " << camp->getName() << ": " << served << " served, "
-              << blocked << " blocked, " << short_ << " short of stock.\n";
+              << blocked << " blocked, " << shortOfStock << " short of stock.\n";
 }
 
+// Read-only: takes no lock. That is safe only because the main thread is the
+// sole mutator and CsvStore::saveAll is const, so the autosave thread merely reads.
 void ConsoleApp::handleStockView() {
     Camp* camp = chooseCamp("View stock of which camp");
     if (camp == 0) return;
@@ -519,6 +512,7 @@ void ConsoleApp::handleStockIn() {
 }
 
 void ConsoleApp::handleTransferSuggestions() {
+    // The suggest() call only reads (no lock; see the note above handleListCamps).
     std::vector<TransferSuggestion> list = advisor.suggest(camps.all());
     if (list.empty()) {
         std::cout << "No transfers needed.\n";
@@ -576,6 +570,8 @@ void ConsoleApp::handleHealthLog() {
     }
 }
 
+// Read-only: takes no lock. That is safe only because the main thread is the
+// sole mutator and CsvStore::saveAll is const, so the autosave thread merely reads.
 void ConsoleApp::handleSortFamilies() {
     std::vector<Family*> list = families.all();
     if (list.empty()) {
@@ -600,6 +596,8 @@ void ConsoleApp::handleSortFamilies() {
     }
 }
 
+// Read-only: takes no lock. That is safe only because the main thread is the
+// sole mutator and CsvStore::saveAll is const, so the autosave thread merely reads.
 void ConsoleApp::handleReport() {
     Camp* camp = chooseCamp("Report for which camp");
     if (camp == 0) return;

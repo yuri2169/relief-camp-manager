@@ -94,6 +94,9 @@ public:
     // [Runtime polymorphism from data] turns a type tag back into the right
     // concrete Person. This is the one place that knows every subclass, so
     // adding a person type means touching exactly one switch.
+    // A camp's daily demand is derived, not stored: the sum of its families'
+    // daily rations. Used by loadAll and by ConsoleApp so there is one rule.
+    static void deriveDailyDemand(Registry<Camp>& camps, const Registry<Family>& families);
     static Person* makePerson(const std::string& typeTag, const std::string& name,
                               int age, char sex, int familyId, int campId,
                               const std::string& skill, const std::string& shift);

@@ -984,4 +984,22 @@ void run_csv_tests() {
     Person::resetIdCounter(1);
     Family::resetIdCounter(1);
     Camp::resetIdCounter(1);
+
+    // --- deriveDailyDemand: the one rule shared by loadAll and the menu ---
+    {
+        Registry<Camp> demandCamps;
+        Registry<Family> demandFamilies;
+        Camp* dc = demandCamps.add(std::unique_ptr<Camp>(new Camp("Demand", "Test", 50)));
+        Family* inCamp = demandFamilies.add(std::unique_ptr<Family>(new Family("In", "V")));
+        inCamp->addMember(new Adult("A", 30, 'F', inCamp->getId(), 0));
+        inCamp->setCampId(dc->getId());
+        Family* elsewhere = demandFamilies.add(std::unique_ptr<Family>(new Family("Out", "V")));
+        elsewhere->addMember(new Adult("B", 30, 'M', elsewhere->getId(), 0));
+        dc->stockRef().setDailyDemand(Ration(99));      // stale value must be replaced
+        CsvStore::deriveDailyDemand(demandCamps, demandFamilies);
+        for (int i = 0; i < ITEM_COUNT; i++) {
+            Item it = itemAt(i);
+            ASSERT_NEAR(dc->getStock().getDailyDemand().get(it), inCamp->dailyRation().get(it), 1e-9);
+        }
+    }
 }

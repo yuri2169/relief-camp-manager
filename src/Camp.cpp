@@ -127,6 +127,13 @@ Camp Camp::operator--(int) {
 }
 
 void Camp::addShelter(const Shelter& s) { shelters.push_back(s); }
+int Camp::findShelterFor(int people) const {
+    for (int i = 0; i < shelterCount(); i++) {
+        if (shelters[i].hasRoom(people)) return i;
+    }
+    return -1;
+}
+
 int Camp::shelterCount() const { return static_cast<int>(shelters.size()); }
 
 const Camp::Shelter& Camp::shelterAt(int index) const {
