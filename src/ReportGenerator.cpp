@@ -4,6 +4,7 @@
 #include "DistributionLog.h"
 #include "HealthMonitor.h"
 #include "Exceptions.h"
+#include <cstddef>
 #include <sstream>
 #include <fstream>
 #include <iomanip>
@@ -16,7 +17,7 @@ const double kLowDays = 3.0;
 // Wraps a CSV value in quotes when it contains a comma or a quote, so every
 // row keeps exactly three fields.
 std::string csvField(const std::string& value) {
-    if (value.find(',') == std::string::npos && value.find('"') == std::string::npos) {
+    if (value.find_first_of(",\"\n\r") == std::string::npos) {
         return value;
     }
     std::string quoted = "\"";
@@ -28,10 +29,12 @@ std::string csvField(const std::string& value) {
     return quoted;
 }
 
-// 999 days is Stock's "nothing is being consumed" answer (or a cap), never a
-// real forecast, so it is shown in words.
-bool isNoDemand(double days) {
-    return days >= Stock::kUnlimitedDays;
+// Stock answers 999 days both when an item has no demand and for very large
+// figures, so the two are told apart by asking the demand itself.
+const double kEpsilon = 1e-9;
+
+bool hasDemand(const Stock& stock, Item item) {
+    return stock.getDailyDemand().get(item) > kEpsilon;
 }
 
 }  // namespace
@@ -48,20 +51,37 @@ std::string ReportGenerator::stockTable(const Camp& camp) const {
         out << "  " << std::left << std::setw(10) << itemName(item)
             << std::right << std::setw(8) << camp.stock.get(item) << " "
             << std::left << std::setw(8) << itemUnit(item) << std::right;
-        if (isNoDemand(days)) {
+        if (!hasDemand(camp.stock, item)) {
             out << "no daily demand";
+        } else if (days >= Stock::kUnlimitedDays) {
+            out << std::setw(7) << "999+" << " days";
         } else {
             out << std::setw(7) << days << " days";
             if (days <= kLowDays) { out << "  LOW"; }
         }
         out << "\n";
     }
-    double worst = camp.stock.daysOfSupply();
-    if (isNoDemand(worst)) {
+    // The worst item is the one with demand and the fewest days; ties keep
+    // the lower index. Items with no demand never qualify.
+    bool found = false;
+    Item worstItem = Item::Rice;
+    double worst = 0.0;
+    for (int i = 0; i < ITEM_COUNT; i++) {
+        Item item = itemAt(i);
+        if (!hasDemand(camp.stock, item)) { continue; }
+        double days = camp.stock.daysOfSupplyFor(item);
+        if (!found || days < worst) {
+            found = true;
+            worstItem = item;
+            worst = days;
+        }
+    }
+    if (!found) {
         out << "Worst item: none (no daily demand recorded)\n";
+    } else if (worst >= Stock::kUnlimitedDays) {
+        out << "Worst item: " << itemName(worstItem) << " (999+ days)\n";
     } else {
-        out << "Worst item: " << itemName(camp.stock.mostCriticalItem())
-            << " (" << worst << " days)\n";
+        out << "Worst item: " << itemName(worstItem) << " (" << worst << " days)\n";
     }
     return out.str();
 }
@@ -70,6 +90,8 @@ std::string ReportGenerator::dailyReport(const Camp& camp, const Date& date,
                                          const std::vector<Family*>& families,
                                          const DistributionLog& log,
                                          const HealthMonitor& health) const {
+    // Note for callers: "of N" counts the families passed in, while "Served
+    // today" is this camp's log entries, so pass this camp's families.
     std::ostringstream out;
     out << "=====================================================\n";
     out << " DAILY CAMP REPORT   " << date << "\n";
@@ -84,6 +106,7 @@ std::string ReportGenerator::dailyReport(const Camp& camp, const Date& date,
     out << "\n\n";
 
     out << "SHELTERS\n";
+    if (camp.shelters.empty()) { out << "  No shelters\n"; }
     for (std::size_t i = 0; i < camp.shelters.size(); i++) {
         const Camp::Shelter& s = camp.shelters[i];
         out << "  " << s.getLabel() << ": " << s.getOccupancy() << " / "
@@ -99,6 +122,7 @@ std::string ReportGenerator::dailyReport(const Camp& camp, const Date& date,
         << static_cast<int>(families.size()) << " families\n";
     Ration issued = log.totalForCamp(campId, date);
     out << std::fixed << std::setprecision(2);
+    if (issued.isZero()) { out << "  Nothing issued today\n"; }
     for (int i = 0; i < ITEM_COUNT; i++) {
         Item item = itemAt(i);
         if (issued.get(item) > 0.0) {
@@ -129,6 +153,7 @@ std::string ReportGenerator::dailyReport(const Camp& camp, const Date& date,
     out << "\n";
 
     out << "FAMILIES\n";
+    if (families.empty()) { out << "  No families\n"; }
     for (std::size_t i = 0; i < families.size(); i++) {
         const Family* f = families[i];
         if (f == nullptr) { continue; }

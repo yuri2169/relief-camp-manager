@@ -29,6 +29,34 @@ static bool has(const std::string& text, const std::string& piece) {
     return text.find(piece) != std::string::npos;
 }
 
+static std::string readFile(const std::string& path) {
+    std::ifstream in(path.c_str());
+    ASSERT_TRUE(in.is_open());
+    std::string text;
+    std::string line;
+    while (std::getline(in, line)) { text += line + "\n"; }
+    return text;
+}
+
+// Counts fields the way a CSV reader does: commas inside quotes and newlines
+// inside quotes do not separate anything.
+static bool allRowsHaveThreeFields(const std::string& text) {
+    int fields = 1;
+    bool inQuotes = false;
+    int rows = 0;
+    for (std::size_t i = 0; i < text.size(); i++) {
+        char c = text[i];
+        if (c == '"') { inQuotes = !inQuotes; }
+        else if (c == ',' && !inQuotes) { fields++; }
+        else if (c == '\n' && !inQuotes) {
+            if (fields != 3) { return false; }
+            fields = 1;
+            rows++;
+        }
+    }
+    return rows > 0 && !inQuotes;
+}
+
 static std::string num(int n) {
     std::ostringstream os;
     os << n;
@@ -144,7 +172,40 @@ void run_report_tests() {
     ASSERT_TRUE(hasLine(bareStock, "Worst item: none (no daily demand recorded)"));
     ASSERT_FALSE(has(bareStock, "999"));
 
-    // A camp past its capacity is flagged in the header.
+    // Large stock against real demand is a capped figure, never "no demand".
+    Camp rich("Depot", "Jorhat", 10);
+    rich.stockRef().set(Item::Rice, 5000.0);
+    rich.stockRef().set(Item::Dal, 100.0);
+    Ration smallDemand;
+    smallDemand.set(Item::Dal, 10.0);
+    smallDemand.set(Item::Salt, 1.0);
+    rich.stockRef().setDailyDemand(smallDemand);
+    rich.stockRef().set(Item::Salt, 50000.0);
+    std::string richTable = reporter.stockTable(rich);
+    ASSERT_TRUE(hasLine(richTable, "  Salt" + std::string(7,' ') + "50000.0 kg" + std::string(9,' ') + "999+ days"));
+    ASSERT_TRUE(hasLine(richTable, "  Dal" + std::string(10,' ') + "100.0 kg" + std::string(9,' ') + "10.0 days"));
+    // Rice has stock but no demand: that one really is "no daily demand".
+    ASSERT_TRUE(hasLine(richTable, "  Rice        5000.0 kg      no daily demand"));
+    ASSERT_TRUE(hasLine(richTable, "Worst item: Dal (10.0 days)"));
+    ASSERT_FALSE(has(richTable, " 999 "));
+    // Only well-stocked items with demand: worst item is capped, not "none".
+    Camp flush("Depot2", "Jorhat", 10);
+    flush.stockRef().set(Item::Salt, 50000.0);
+    Ration saltOnly;
+    saltOnly.set(Item::Salt, 1.0);
+    flush.stockRef().setDailyDemand(saltOnly);
+    ASSERT_TRUE(hasLine(reporter.stockTable(flush), "Worst item: Salt (999+ days)"));
+
+    // An empty camp renders a fallback line in every empty section.
+    Camp fresh("New Camp", "Jorhat", 10);
+    std::vector<Family*> noFamilies;
+    std::string emptyReport = reporter.dailyReport(fresh, today, noFamilies, log, none);
+    ASSERT_TRUE(hasLine(emptyReport, "  No shelters"));
+    ASSERT_TRUE(hasLine(emptyReport, "  Nothing issued today"));
+    ASSERT_TRUE(hasLine(emptyReport, "  No cases in the last 3 days"));
+    ASSERT_TRUE(hasLine(emptyReport, "  No families"));
+
+    // A camp at exactly its capacity (isOverflowing is occupancy >= capacity) is flagged.
     Camp full("Tent", "Jorhat", 5);
     full.setOccupancy(5);
     ASSERT_TRUE(hasLine(reporter.dailyReport(full, today, families, log, none),
@@ -192,14 +253,26 @@ void run_report_tests() {
 
     std::remove(path.c_str());
 
-    // A value that contains a comma is quoted, so every row keeps three fields.
+    // Values with a comma, a quote or a newline are quoted, so every row keeps
+    // exactly three fields.
     Camp commaCamp("School, East Block", "Morigaon", 20);
     reporter.exportCsv(path, commaCamp, today, families, log, health);
-    std::ifstream in2(path.c_str());
-    std::string commaContents;
-    while (std::getline(in2, line)) { commaContents += line + "\n"; }
-    in2.close();
+    std::string commaContents = readFile(path);
     ASSERT_TRUE(hasLine(commaContents, "camp,name,\"School, East Block\""));
+    ASSERT_TRUE(allRowsHaveThreeFields(commaContents));
+
+    Camp quoteCamp("The \"Big\" Hall", "\"", 20);
+    reporter.exportCsv(path, quoteCamp, today, families, log, health);
+    std::string quoteContents = readFile(path);
+    ASSERT_TRUE(hasLine(quoteContents, "camp,name,\"The \"\"Big\"\" Hall\""));
+    ASSERT_TRUE(hasLine(quoteContents, "camp,district,\"\"\"\""));   // a lone quote
+    ASSERT_TRUE(allRowsHaveThreeFields(quoteContents));
+
+    Camp newlineCamp("Line one\nLine two", "Morigaon", 20);
+    reporter.exportCsv(path, newlineCamp, today, families, log, health);
+    std::string newlineContents = readFile(path);
+    ASSERT_TRUE(has(newlineContents, "camp,name,\"Line one\nLine two\"\n"));
+    ASSERT_TRUE(allRowsHaveThreeFields(newlineContents));
     std::remove(path.c_str());
 
     // An unwritable path is reported, not swallowed.
