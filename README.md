@@ -62,14 +62,16 @@ The demo date is fixed at 2026-07-14. Menu numbers to press (`./bin/relief`):
 1. **Start.** The app loads the seeded data and shows the banner.
 2. **Register a family** (`2`) with an infant and an elderly member. The ration and vulnerability score are computed.
 3. **Admit to a full camp** (`3`). Camp 2 is full, so the overflow exception is caught and other camps are suggested; admit to one of those.
-4. **Distribute rations** (`4`), then run it again (`4`). The second claim the same day is blocked.
-5. **Stock** (`5`) shows days of supply with rice critical at camp 2; **transfer suggestions** (`7`) proposes moving rice from camp 3.
-6. **Log health cases** (`8`) for camp 2, repeating until the outbreak alert fires.
-7. **Daily report** (`10`), and answer `y` to export it as `data/report_<date>_camp<id>.csv` (git-ignored).
+4. **Distribute rations** (`4`) for camp `1`, then run it again (`4`, camp `1`). The second claim the same day is blocked.
+5. **Stock** (`5`, camp `2`) shows days of supply with rice critical; **transfer suggestions** (`7`) proposes moving rice from camp 3. Apply it, then view the stock again (`5`, camp `2`) to see the days rise.
+6. **Log health cases** (`8`) for camp `2`, repeating until the outbreak alert fires.
+7. **Daily report** (`10`, camp `2`), and answer `y` to export it as `report_<date>_camp<id>.csv` in whichever data directory you launched with (git-ignored under `data/`).
 8. **Quit** (`0`). Autosave runs; restart and the data is intact.
 
-The key sequence is `2, 3, 4, 5, 7, 8, 10, 0` (with `4` and `8` repeated); a full
-piped-input run with output is recorded in `docs/VERIFICATION.md`, section 8.
+The key sequence is `2, 3, 4, 5, 7, 8, 10, 0` (with `4`, `5` and `8` repeated),
+interleaved with the camp ids above and the prompts each option asks for; a full
+piped-input run with its real output is recorded in `docs/VERIFICATION.md`,
+section 8, which is the authority if anything here is unclear.
 
 **Seva First angles.** Affordability: it runs offline on any ordinary laptop with
 no server, no network and no licence. Scalability: another district is a
