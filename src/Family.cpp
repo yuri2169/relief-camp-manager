@@ -54,14 +54,19 @@ Family::~Family() {
 }
 
 void Family::copyFrom(const Family& other) {
+    int newCapacity = other.count > 0 ? other.count : 4;
     // [Dynamic memory allocation]
-    capacity = other.count > 0 ? other.count : 4;
-    members = new Person*[capacity];
-    count = 0;
+    // Allocate first and commit to the members only once it has succeeded, so a
+    // failed allocation can never leave capacity set while members is null.
+    Person** fresh = new Person*[newCapacity];
+    int n = 0;
     for (int i = 0; i < other.count; i++) {
-        members[count] = other.members[i]->clone();   // deep copy, keeps the type
-        count++;
+        fresh[n] = other.members[i]->clone();   // deep copy, keeps the type
+        n++;
     }
+    members = fresh;
+    count = n;
+    capacity = newCapacity;
 }
 
 void Family::freeAll() {
