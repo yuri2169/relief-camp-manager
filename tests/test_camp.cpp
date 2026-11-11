@@ -35,6 +35,20 @@ void run_camp_tests() {
     hall.vacate(1000);                          // clamps at zero rather than going negative
     ASSERT_EQ(hall.getOccupancy(), 0);
 
+    // Guards on the setters and on negative arguments: rejected, and nothing changed.
+    hall.occupy(10);
+    ASSERT_THROWS(hall.occupy(-5), std::invalid_argument);
+    ASSERT_EQ(hall.getOccupancy(), 10);
+    ASSERT_THROWS(hall.vacate(-10), std::invalid_argument);
+    ASSERT_EQ(hall.getOccupancy(), 10);
+    ASSERT_THROWS(hall.setOccupancy(-1), std::invalid_argument);
+    ASSERT_EQ(hall.getOccupancy(), 10);
+    ASSERT_THROWS(hall.setOccupancy(41), OverCapacityException);
+    ASSERT_EQ(hall.getOccupancy(), 10);
+    hall.setOccupancy(40);                      // exactly full is allowed
+    ASSERT_EQ(hall.getOccupancy(), 40);
+    hall.vacate(40);
+
     Camp::Shelter blankShelter;
     ASSERT_EQ(blankShelter.getCapacity(), 0);
 
@@ -170,6 +184,18 @@ void run_camp_tests() {
     // setOccupancy and adoptId support CSV loading.
     c1->setOccupancy(17);
     ASSERT_EQ(c1->getOccupancy(), 17);
+    ASSERT_THROWS(c1->setOccupancy(-1), std::invalid_argument);
+    ASSERT_EQ(c1->getOccupancy(), 17);
+    ASSERT_THROWS(c1->setOccupancy(51), OverCapacityException);
+    ASSERT_EQ(c1->getOccupancy(), 17);
+    bool setCaught = false;
+    try {
+        c1->setOccupancy(51);
+    } catch (const OverCapacityException& e) {
+        setCaught = true;
+        ASSERT_EQ(e.getFreeSpace(), 50);
+    }
+    ASSERT_TRUE(setCaught);
     c1->adoptId(900);
     ASSERT_EQ(c1->getId(), 900);
 

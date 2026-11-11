@@ -40,6 +40,10 @@ private:
     std::string name;
     std::string district;
     int capacity;
+    // The authoritative head-count for the camp. A Shelter's own occupancy is
+    // only the placement detail within it. A caller that admits a family must
+    // occupy the chosen shelter with the same number of people, and a caller
+    // that releases must vacate it. The two counters are kept separate on purpose.
     int occupancy;
     std::vector<Shelter> shelters;
     Stock stock;
@@ -83,9 +87,9 @@ public:
     void setOccupancy(int people);      // CSV loading
     void setName(const std::string& newName);
 
-    // [Friend class] ReportGenerator reads the camp's private occupancy and
-    // stock directly, because a report is a view of the camp's internals and
-    // adding public getters just for it would widen the interface for everyone.
+    // [Friend class] ReportGenerator reads the camp's private members
+    // (shelters, occupancy, stock) directly instead of going through the
+    // public accessors, and `friend` is what permits that.
     friend class ReportGenerator;
 
     friend std::ostream& operator<<(std::ostream& os, const Camp& c);

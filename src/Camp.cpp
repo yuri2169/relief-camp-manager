@@ -18,6 +18,7 @@ int Camp::Shelter::freeSpace() const { return capacity - occupancy; }
 bool Camp::Shelter::hasRoom(int people) const { return people <= freeSpace(); }
 
 void Camp::Shelter::occupy(int people) {
+    if (people < 0) throw std::invalid_argument("cannot occupy a negative number of people");
     // The shelter does not know its camp's id, so it reports -1; Camp::admit
     // is the path that reports a real camp id.
     if (people > freeSpace()) throw OverCapacityException(-1, people, freeSpace());
@@ -25,11 +26,17 @@ void Camp::Shelter::occupy(int people) {
 }
 
 void Camp::Shelter::vacate(int people) {
+    if (people < 0) throw std::invalid_argument("cannot vacate a negative number of people");
     occupancy -= people;
     if (occupancy < 0) occupancy = 0;
 }
 
-void Camp::Shelter::setOccupancy(int people) { occupancy = people; }
+void Camp::Shelter::setOccupancy(int people) {
+    // Check first, change second; CSV loading may feed this untrusted numbers.
+    if (people < 0) throw std::invalid_argument("occupancy cannot be negative");
+    if (people > capacity) throw OverCapacityException(-1, people, capacity);
+    occupancy = people;
+}
 
 std::ostream& operator<<(std::ostream& os, const Camp::Shelter& s) {
     os << s.label << " [" << s.occupancy << "/" << s.capacity << "]";
@@ -138,7 +145,11 @@ Camp::Shelter& Camp::shelterAt(int index) {
 
 Stock& Camp::stockRef() { return stock; }
 const Stock& Camp::getStock() const { return stock; }
-void Camp::setOccupancy(int people) { occupancy = people; }
+void Camp::setOccupancy(int people) {
+    if (people < 0) throw std::invalid_argument("occupancy cannot be negative");
+    if (people > capacity) throw OverCapacityException(id, people, capacity);
+    occupancy = people;
+}
 void Camp::setName(const std::string& newName) { name = newName; }
 
 std::ostream& operator<<(std::ostream& os, const Camp& c) {
