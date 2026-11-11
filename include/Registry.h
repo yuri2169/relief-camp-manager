@@ -25,6 +25,8 @@ public:
     Registry(const Registry& other) = delete;
     Registry& operator=(const Registry& other) = delete;
 
+    // Ownership of the item moves INTO the registry. The returned pointer is a
+    // non-owning observer of the stored element (see the note above at()).
     T* add(std::unique_ptr<T> item) {
         T* raw = item.get();
         items.push_back(std::move(item));
@@ -53,6 +55,13 @@ public:
 
     int size() const { return static_cast<int>(items.size()); }
 
+    // Ownership rules for every pointer handed out by add(), at(), findById()
+    // and all():
+    //  - The registry owns each element through its std::unique_ptr.
+    //  - A returned T* is a non-owning observer: use it, but NEVER delete it.
+    //  - It is invalidated by remove() and clear() (the element is destroyed),
+    //    and by anything else that reallocates the internal vector. Do not keep
+    //    it across those calls.
     T* at(int index) const {
         if (index < 0 || index >= static_cast<int>(items.size())) {
             return 0;
