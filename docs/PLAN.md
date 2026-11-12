@@ -20,7 +20,7 @@ Every task's requirements implicitly include all of the following.
 - **Include guards:** `#ifndef RELIEF_<FILENAME>_H` / `#define` / `#endif`. No `#pragma once`.
 - **No GUI, no networking, no login or authentication, no multi-language UI, no SMS.**
 - **Tests:** self-written assert-based runner in `tests/`. Nothing downloaded. Every task writes its failing test first and the test must be observed failing before the implementation is written.
-- **Commit after every task** with a clear message. Commit messages end with the line `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.
+- **Commit after every task** with a clear message.
 - **Destructor lifecycle messages** print only when the macro `RELIEF_DEBUG` is defined (`make debug`), so normal runs and the demo stay clean.
 - **IDs:** every entity with an ID uses a `static int nextId` and a `static int generateId()`. CSV loading uses `adoptId(int)` plus `resetIdCounter(int)` so reloaded data keeps its original IDs and new objects do not collide.
 
@@ -394,9 +394,7 @@ git commit -m "Add build system and self-written test runner
 
 Makefile and CMakeLists.txt build the app, the test binary and (later) the
 seed generator. tests/TestRunner.h provides ASSERT_TRUE/FALSE/EQ/STR_EQ/
-NEAR/THROWS with a pass-fail tally and a non-zero exit code on failure.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+NEAR/THROWS with a pass-fail tally and a non-zero exit code on failure."
 ```
 
 ---
@@ -615,9 +613,7 @@ git commit -m "Add Item, Symptom and Date value types
 
 Date carries day-number arithmetic so the 3-day outbreak window and the
 same-day duplicate-claim check are simple to compute and test. Comparison
-and difference operators are friend functions.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+and difference operators are friend functions."
 ```
 
 ---
@@ -862,9 +858,7 @@ git commit -m "Add Ration value type and the static RationNorms table
 RationNorms holds every norm as a static data member with static factory
 functions, so there is one source of truth for entitlements. Ration(int)
 is the basic-to-class conversion; arithmetic is friend-based and clamps at
-zero so a ration can never go negative.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+zero so a ration can never go negative."
 ```
 
 ---
@@ -1086,9 +1080,7 @@ git commit -m "Add abstract Person base class
 Static ID generator and live-object counter, all three constructor forms, a
 virtual destructor that traces the lifecycle under RELIEF_DEBUG, and five
 pure virtual functions including clone() so a polymorphic member can be
-deep-copied through a base pointer.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+deep-copied through a base pointer."
 ```
 
 ---
@@ -1283,9 +1275,7 @@ git commit -m "Add Resident and Volunteer as virtual bases of Person
 Both branches use `virtual public Person` so the ResidentVolunteer in Task 7
 carries exactly one Person subobject. Resident stays abstract because a
 resident's ration depends on their age band. Volunteer is concrete and draws
-the worker meal norm.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+the worker meal norm."
 ```
 
 ---
@@ -1422,9 +1412,7 @@ git commit -m "Add Infant, Child and Adult age bands
 
 Hierarchical inheritance: three concrete residents from one Resident base,
 each overriding rationNeed() with its own norm. Adult folds the pregnancy
-and lactation bonuses into the returned Ration.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+and lactation bonuses into the returned Ration."
 ```
 
 ---
@@ -1658,9 +1646,7 @@ git commit -m "Add Elderly and ResidentVolunteer, completing the hierarchy
 Elderly gives four-level multilevel inheritance. ResidentVolunteer multiply
 inherits Adult and Volunteer and closes the diamond: the test asserts that
 the Person reached through each parent is the same object, which only holds
-because Person is a virtual base.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+because Person is a virtual base."
 ```
 
 ---
@@ -2023,9 +2009,7 @@ git commit -m "Add Family with a hand-written rule of three
 Family owns a raw Person** array it grows itself, deep-copies through the
 virtual clone() so each copy owns its own people, guards self-assignment, and
 frees everything in its destructor. Tests assert the live Person count returns
-to zero, that a copy's members are distinct objects, and that f = f survives.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+to zero, that a copy's members are distinct objects, and that f = f survives."
 ```
 
 ---
@@ -2185,9 +2169,7 @@ git commit -m "Add RationCard and the Family-to-RationCard conversion
 
 A RationCard is a snapshot an official hands over, which is a different kind
 of thing from a live Family, so the class-to-class conversion operator earns
-its place. Resident volunteers count as adults on the card.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+its place. Resident volunteers count as adults on the card."
 ```
 
 ---
@@ -2432,9 +2414,7 @@ git commit -m "Add Registry<T> class template and findMax function template
 
 Registry<T> stores any entity with getId() behind unique_ptr, the deliberate
 counterpart to Family's manual ownership. findMax takes a pointer to a member
-function, so one template replaces a family of near-identical search helpers.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+function, so one template replaces a family of near-identical search helpers."
 ```
 
 ---
@@ -2655,9 +2635,7 @@ git commit -m "Add ReliefException hierarchy with four derived exceptions
 Each exception carries the data its handler needs: OverCapacityException
 reports the free space so the menu can suggest another camp, and
 FileFormatException names the file and line so a hand-edited CSV is
-debuggable. All four are catchable as ReliefException or as std::exception.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+debuggable. All four are catchable as ReliefException or as std::exception."
 ```
 
 ---
@@ -2955,9 +2933,7 @@ git commit -m "Add Allocation and Stock with days-of-supply projection
 Stock + Stock and Stock - Allocation are friend binary operators returning new
 objects, and both refuse to go negative by throwing InsufficientStockException
 before mutating. Converting a Stock to double gives its days of supply, so the
-worst item decides when a camp needs a transfer.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+worst item decides when a camp needs a transfer."
 ```
 
 ---
@@ -3280,9 +3256,7 @@ git commit -m "Add Camp with the nested Shelter class and capacity guard
 Camp::Shelter is nested because a shelter has no meaning outside its camp.
 admit() takes a whole Family and throws OverCapacityException carrying the
 free space, so the menu can suggest an alternative. ++/-- adjust occupancy
-and respect the same guard. ReportGenerator is declared a friend.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+and respect the same guard. ReportGenerator is declared a friend."
 ```
 
 ---
@@ -3461,9 +3435,7 @@ git commit -m "Add DistributionLog with the cross-camp duplicate-claim rule
 A family that has collected on a date is refused in every camp, not just the
 one that served them, which is the failure paper registers cannot catch. The
 rule itself lives in Allocation::operator== and the log simply consults it.
-loadEntry bypasses the check so restoring a CSV does not reject its own data.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+loadEntry bypasses the check so restoring a CSV does not reject its own data."
 ```
 
 ---
@@ -3837,9 +3809,7 @@ git commit -m "Add hand-written priority queue and pointer-to-member sorting
 DistributionQueue is our own binary max-heap, ordered by Family::operator<, so
 the most vulnerable household is served first. FamilySorter's Metric typedef is
 a pointer to a member function, collapsing four near-identical sorts into one
-routine whose ordering is chosen at run time.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+routine whose ordering is chosen at run time."
 ```
 
 ---
@@ -4185,9 +4155,7 @@ Every stock movement is logged, and netFor() recomputes the balance from the
 transactions so the register and the running total cannot disagree. A failed
 stockOut logs nothing. TransferAdvisor proposes a move only when a donor can
 stay above its surplus line, and the test proves applying its suggestion
-clears the shortage.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+clears the shortage."
 ```
 
 ---
@@ -4407,9 +4375,7 @@ git commit -m "Add HealthMonitor with a rolling 3-day outbreak alert
 Cases are counted per camp and per symptom over [today-2, today] using
 Date::operator-, so one bad afternoon is not an outbreak and three quiet days
 clear the alarm. Diarrhoea has the lowest threshold because contaminated water
-is the real killer in a flood camp.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+is the real killer in a flood camp."
 ```
 
 ---
@@ -4669,9 +4635,7 @@ The daily report reads Camp's private occupancy, shelters and stock directly
 through friendship, instead of widening Camp's public interface for one
 caller. Every parameter is a const reference, so reporting cannot mutate what
 it reports on. Export writes a flat section,key,value CSV and throws
-FileFormatException when the path is unwritable.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+FileFormatException when the path is unwritable."
 ```
 
 ---
@@ -5102,9 +5066,7 @@ and survives a power cut. The round-trip test asserts every member keeps its
 dynamic type, flags and ration, which is what catches a loader that quietly
 turns the whole camp into adults. Malformed rows throw FileFormatException
 naming the file and line, and loaders reset the ID counters so new records
-cannot collide with loaded ones.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+cannot collide with loaded ones."
 ```
 
 ---
@@ -5402,9 +5364,7 @@ Saves on a timer so an unannounced power cut costs one interval, not the day's
 register. The save holds the same mutex the menu takes, which the test proves
 with try_lock from inside the callback. stop() signals a condition_variable
 rather than waiting out the interval, so quitting is immediate, and the
-destructor joins even if stop() was never called.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+destructor joins even if stop() was never called."
 ```
 
 ---
@@ -5688,9 +5648,7 @@ ConsoleApp owns every registry and collaborator and is the only place that
 catches exceptions and prints: each precise exception type gets its own
 recovery, so a full camp suggests alternatives and a duplicate claim is
 blocked without aborting the distribution round. Autosave shares the app's
-data mutex. readInt returns 0 on EOF so the binary can be driven by a script.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+data mutex. readInt returns 0 on EOF so the binary can be driven by a script."
 ```
 
 ---
@@ -5935,9 +5893,7 @@ identically every run. The data is rigged for the demo script: camp 2 has at
 most 2 free spaces and under 3 days of rice, camp 3 holds a rice surplus, the
 diarrhoea window sits just under its threshold, and nothing is claimed on the
 demo date. test_seed.cpp asserts each of those facts, so a broken dataset
-fails the suite instead of failing during the presentation.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+fails the suite instead of failing during the presentation."
 ```
 
 ---
@@ -6041,9 +5997,7 @@ OOP_MAPPING.md gives the professor a file:line reference for every syllabus
 concept, generated from the tag comments in the source and checked by
 tools/check_mapping.sh so a missing concept fails loudly. It closes with the
 honest assessment of the three rows that are pedagogical choices rather than
-the natural engineering answer.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+the natural engineering answer."
 ```
 
 ---
@@ -6127,9 +6081,7 @@ git commit -m "Final verification: build, tests and the full demo script
 Builds clean with make, CMake and make debug on this machine. Full suite
 passes with zero failures. Seed data regenerated and its demo-critical values
 confirmed. All eight demo steps walked end to end with the transcript recorded
-in the task report.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+in the task report."
 git log --oneline
 ```
 
