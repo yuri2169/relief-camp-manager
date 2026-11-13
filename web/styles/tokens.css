@@ -1,0 +1,57 @@
+/* Everything visual that makes this starter "Poster" is defined here.
+   Change --color-field to recolour the whole site. Keep ink-on-field
+   contrast at 4.5:1 or better (yellow, lime, orange and pale pink work;
+   mid blues and reds do not). */
+@theme {
+  --color-field: #ffd91a;
+  --color-ink: #0b0b0b;
+  --color-paper: #ffffff;
+  --color-ink-rule: #333333;
+
+  --text-poster: clamp(2.6rem, 13.5vw, 9.5rem);
+  --text-poster--line-height: 0.87;
+  --text-poster--letter-spacing: -0.05em;
+
+  --text-mega: clamp(6rem, 22vw, 10rem);
+  --text-mega--line-height: 0.76;
+  --text-mega--letter-spacing: -0.06em;
+
+  --text-title: clamp(2.25rem, 6vw, 4.25rem);
+  --text-title--line-height: 0.94;
+  --text-title--letter-spacing: -0.04em;
+
+  --text-figure: clamp(2.5rem, 6vw, 3.5rem);
+  --text-figure--line-height: 1;
+  --text-figure--letter-spacing: -0.04em;
+
+  --text-callout: clamp(1.4rem, 3.4vw, 2rem);
+  --text-callout--line-height: 0.98;
+  --text-callout--letter-spacing: -0.03em;
+
+  --text-lede: 1.1875rem;
+  --text-lede--line-height: 1.38;
+
+  --text-small: 0.95rem;
+  --text-small--line-height: 1.4;
+
+  --animate-pulse-bar: pulse-bar 1.1s ease-in-out infinite;
+
+  @keyframes pulse-bar {
+    0%, 100% { transform: scaleY(0.35); }
+    50% { transform: scaleY(1); }
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* A flat stripe pattern for media placeholders. It is the one allowed use of a
+   CSS gradient function: a hatch, not a decorative gradient. */
+@utility hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-ink) 10%, transparent) 0 2px,
+    transparent 2px 12px
+  );
+}

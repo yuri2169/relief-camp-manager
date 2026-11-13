@@ -97,6 +97,17 @@ suite. The Makefile and CMakeLists.txt are written to be portable to Linux and
 Windows MinGW, but **MinGW/Windows has not been exercised**, and neither has a
 Linux machine. See `docs/VERIFICATION.md` for the recorded output.
 
+## The web interface
+
+`web/` holds a companion web view of the same Morigaon dataset, built for the
+Seva First entry so judges can see the project without a terminal. **It is not
+part of the CS 203 submission.** The graded program is the C++17 console
+application in this folder: standard library only, no GUI, no networking, no
+third-party libraries. The `Makefile` neither builds, links nor tests anything
+under `web/`, and the two share no code — they share a dataset, and `web/`
+recomputes its figures by the same rules so the two agree to the decimal. See
+`web/README.md`.
+
 ## Documentation
 
 - `tools/collect_tags.sh` and `tools/check_mapping.sh` regenerate and verify the
