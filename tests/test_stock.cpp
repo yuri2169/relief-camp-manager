@@ -16,7 +16,7 @@ void run_stock_tests() {
     ASSERT_TRUE(alloc.getDate() == Date(2026, 7, 14));
     ASSERT_NEAR(alloc.getAmount().get(Item::Rice), 1.200, 1e-9);
 
-    // [Class to class conversion] an Allocation is usable as the Ration it carries.
+    // An Allocation is usable as the Ration it carries.
     Ration asRation = alloc;
     ASSERT_NEAR(asRation.get(Item::Rice), 1.200, 1e-9);
 
@@ -85,7 +85,7 @@ void run_stock_tests() {
     ASSERT_NEAR(s.daysOfSupply(), 12.5, 1e-9);
     ASSERT_TRUE(s.mostCriticalItem() == Item::Rice);
 
-    // [Class to basic type conversion] a Stock used as a double IS its days of supply.
+    // A Stock used as a double IS its days of supply.
     double days = s;
     ASSERT_NEAR(days, 12.5, 1e-9);
     ASSERT_TRUE(s < 20.0);                   // reads naturally thanks to the conversion
@@ -104,7 +104,6 @@ void run_stock_tests() {
     arriving.set(Item::Rice, 250.0);
     arriving.set(Item::Dal, 20.0);
 
-    // [Friend binary operator] [Objects as arguments] [Returning objects]
     Stock merged = s + arriving;
     ASSERT_NEAR(merged.get(Item::Rice), 750.0, 1e-9);
     ASSERT_NEAR(merged.get(Item::Dal), 100.0, 1e-9);

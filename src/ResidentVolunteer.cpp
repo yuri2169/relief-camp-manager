@@ -2,7 +2,6 @@
 #include "Debug.h"
 
 ResidentVolunteer::ResidentVolunteer()
-    // [Virtual base initialisation]
     // The MOST-DERIVED class initialises the virtual base. Person(...) appears
     // here, not in Adult's or Volunteer's initialiser list, and their own
     // Person(...) calls are ignored for this object. That is exactly why there
@@ -15,7 +14,6 @@ ResidentVolunteer::ResidentVolunteer(const std::string& name, int age, char sex,
                                      int familyId, int campId,
                                      const std::string& skill,
                                      const std::string& shift)
-    // [Virtual base initialisation]
     // Person is named FIRST and initialised once.
     : Person(name, age, sex),
       Adult(name, age, sex, familyId, campId),
@@ -32,7 +30,6 @@ ResidentVolunteer::~ResidentVolunteer() {
     RELIEF_LIFECYCLE("ResidentVolunteer destroyed #" << getId());
 }
 
-// [Ambiguity resolution]
 // Adult and Volunteer both supply these functions, so an unqualified call would
 // be ambiguous. A resident volunteer eats with their family, so the Adult
 // answer is the right one.

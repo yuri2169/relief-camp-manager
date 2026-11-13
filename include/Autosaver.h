@@ -24,18 +24,14 @@
 //  * call stop() and saveNow() WITHOUT holding the data mutex, because the
 //    saver takes that mutex itself (std::mutex is not recursive).
 class Autosaver {
-    // [Multithreading]
     std::thread worker;
-    // [Mutex]
     std::mutex* dataMutex;            // borrowed from ConsoleApp, not owned
     std::function<void()> saveFn;
-    // [Atomic variable]
     std::atomic<bool> running;
     std::atomic<int> saveCount;
     std::atomic<int> failureCount;    // saves whose callback threw
 
     std::mutex waitMutex;             // guards the condition_variable only
-    // [Condition variable]
     std::condition_variable wakeUp;
     int intervalSeconds;
 

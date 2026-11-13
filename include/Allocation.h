@@ -23,11 +23,11 @@ public:
     const Date& getDate() const;
     const Ration& getAmount() const;
 
-    // [Class to class conversion] an Allocation can stand in for the Ration it
+    // An Allocation can stand in for the Ration it
     // carries, which is what lets `stock - allocation` be written at all.
     operator Ration() const;
 
-    // [Friend function] Two allocations are "the same claim" when the same
+    // Two allocations are "the same claim" when the same
     // family claimed on the same day - the camp does NOT matter, because a
     // family must not be able to collect twice by walking to another camp.
     friend bool operator==(const Allocation& a, const Allocation& b);

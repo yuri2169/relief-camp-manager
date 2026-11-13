@@ -8,7 +8,6 @@ class Family;
 // A priority queue over families, most vulnerable first, so an infant's family
 // is served before a household of healthy adults when a queue forms.
 //
-// [Data structure: binary heap]
 // This is a binary max-heap we wrote ourselves rather than std::priority_queue,
 // so the data structure is visible and our overloaded Family::operator< is
 // plainly what drives the ordering.

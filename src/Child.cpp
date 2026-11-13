@@ -7,7 +7,7 @@ Child::Child()
     RELIEF_LIFECYCLE("Child created #" << getId());
 }
 
-// Both bases are named: Person because it is a virtual base, so the most-derived class initialises it, and Resident for the family and camp data. [Virtual base initialisation]
+// Both bases are named: Person because it is a virtual base, so the most-derived class initialises it, and Resident for the family and camp data.
 Child::Child(const std::string& name, int age, char sex, int familyId, int campId)
     : Person(name, age, sex), Resident(name, age, sex, familyId, campId) {
     RELIEF_LIFECYCLE("Child created #" << getId());

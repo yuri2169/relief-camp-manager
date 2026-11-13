@@ -80,7 +80,7 @@ void run_transfer_tests() {
     ASSERT_TRUE(critical[0] == Item::Rice);
     ASSERT_EQ(static_cast<int>(advisor.criticalItems(richCamp).size()), 0);
 
-    // [Returning objects] suggest() hands back a vector of value objects.
+    // Suggest() hands back a vector of value objects.
     std::vector<Camp*> camps;
     camps.push_back(&shortCamp);
     camps.push_back(&richCamp);

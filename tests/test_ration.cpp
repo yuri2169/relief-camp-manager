@@ -33,7 +33,7 @@ void run_ration_tests() {
     ASSERT_TRUE(elderly.get(Item::Rice) < adult.get(Item::Rice));
     ASSERT_TRUE(elderly.get(Item::ORS) > adult.get(Item::ORS));
 
-    // [Basic type to class type] a headcount converts to an adult-equivalent ration.
+    // A headcount converts to an adult-equivalent ration.
     Ration forThree = 3;
     ASSERT_NEAR(forThree.get(Item::Rice), 1.200, 1e-9);
     ASSERT_NEAR(forThree.get(Item::Dal), 0.180, 1e-9);

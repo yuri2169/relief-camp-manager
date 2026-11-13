@@ -23,7 +23,6 @@ Family::Family(const std::string& headName, const std::string& village)
 Family::Family(const Family& other)
     : id(other.id), headName(other.headName), village(other.village),
       campId(other.campId), members(0), count(0), capacity(0) {
-    // [Copy constructor]
     // A shallow copy would leave two families pointing at the same Person
     // objects, and the second destructor would delete them twice. clone() gives
     // each family its own people.
@@ -32,7 +31,6 @@ Family::Family(const Family& other)
 }
 
 Family& Family::operator=(const Family& other) {
-    // [Copy assignment operator]
     // Guard against self-assignment FIRST. Without this, `f = f` would free its
     // own members and then copy from freed memory.
     if (this == &other) {
@@ -48,7 +46,6 @@ Family& Family::operator=(const Family& other) {
 }
 
 Family::~Family() {
-    // [Destructor]
     // Family allocated the members, so Family frees them.
     RELIEF_LIFECYCLE("Family destroyed #" << id << " with " << count << " members");
     freeAll();
@@ -56,7 +53,6 @@ Family::~Family() {
 
 void Family::copyFrom(const Family& other) {
     int newCapacity = other.count > 0 ? other.count : 4;
-    // [Dynamic memory allocation]
     // Allocate first and commit to the members only once it has succeeded, so a
     // failed allocation can never leave capacity set while members is null.
     Person** fresh = new Person*[newCapacity];
@@ -82,7 +78,6 @@ void Family::freeAll() {
 
 void Family::grow() {
     int newCapacity = capacity == 0 ? 4 : capacity * 2;
-    // [Dynamic memory allocation]
     Person** bigger = new Person*[newCapacity];
     for (int i = 0; i < count; i++) {
         bigger[i] = members[i];

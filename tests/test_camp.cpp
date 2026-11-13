@@ -17,7 +17,7 @@ void run_camp_tests() {
     Camp::resetIdCounter(1);
 
     // --- the nested class on its own ---
-    Camp::Shelter hall("Hall-A", 40);           // [Nested class]
+    Camp::Shelter hall("Hall-A", 40);
     ASSERT_STR_EQ(hall.getLabel(), "Hall-A");
     ASSERT_EQ(hall.getCapacity(), 40);
     ASSERT_EQ(hall.getOccupancy(), 0);
@@ -71,7 +71,7 @@ void run_camp_tests() {
     ASSERT_STR_EQ(camp.shelterAt(1).getLabel(), "Tent-1");
     ASSERT_THROWS(camp.shelterAt(2), std::out_of_range);
 
-    // --- admitting a family: [object as argument] ---
+    // --- admitting a family ---
     Family big("Bipul Das", "Bhuragaon");
     for (int i = 0; i < 6; i++) {
         big.addMember(new Adult("Member " + std::to_string(i), 25 + i, 'M', big.getId(), 0));
@@ -133,7 +133,7 @@ void run_camp_tests() {
     camp.release(big);                          // clamps at zero
     ASSERT_EQ(camp.getOccupancy(), 0);
 
-    // --- [unary operators] one more person, one fewer person ---
+    // --- one more person, one fewer person ---
     Camp small("Tent Cluster", "Morigaon", 3);
     ++small;                                    // prefix
     ASSERT_EQ(small.getOccupancy(), 1);

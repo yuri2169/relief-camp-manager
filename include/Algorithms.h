@@ -3,7 +3,6 @@
 
 #include <vector>
 
-// [Function template] + [Pointer to member function]
 // Finds the element scoring highest on a metric the caller chooses, where the
 // metric is a member function of T. One function replaces a separate
 // findMostVulnerable, findLargest, findOldest and so on.

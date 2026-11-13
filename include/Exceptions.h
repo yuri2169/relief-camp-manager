@@ -6,7 +6,7 @@
 #include <exception>
 #include <string>
 
-// [Custom exception base class] Everything this program throws derives from
+// Everything this program throws derives from
 // here, so the menu can write one `catch (const ReliefException& e)` and still
 // recover the precise type when it needs the details.
 class ReliefException : public std::exception {
@@ -14,10 +14,10 @@ class ReliefException : public std::exception {
 public:
     explicit ReliefException(const std::string& message);
     ~ReliefException() override;
-    const char* what() const noexcept override;    // [Overriding a virtual]
+    const char* what() const noexcept override;
 };
 
-// [Derived exception] Thrown by Camp::admit and Camp::Shelter::occupy.
+// Thrown by Camp::admit and Camp::Shelter::occupy.
 // It carries the free space so the handler can suggest another camp.
 class OverCapacityException : public ReliefException {
     int campId;
@@ -30,7 +30,7 @@ public:
     int getFreeSpace() const;
 };
 
-// [Derived exception] Thrown by Stock::take and operator-(Stock, Allocation).
+// Thrown by Stock::take and operator-(Stock, Allocation).
 class InsufficientStockException : public ReliefException {
     Item item;
     double needed;
@@ -42,7 +42,7 @@ public:
     double getAvailable() const;
 };
 
-// [Derived exception] Thrown by DistributionLog::record when a family tries to
+// Thrown by DistributionLog::record when a family tries to
 // claim twice on the same day, in any camp.
 class DuplicateClaimException : public ReliefException {
     int familyId;
@@ -53,7 +53,7 @@ public:
     const Date& getDate() const;
 };
 
-// [Derived exception] Thrown by the CSV layer, with the file and line number
+// Thrown by the CSV layer, with the file and line number
 // so a hand-edited data file can be fixed.
 class FileFormatException : public ReliefException {
     std::string file;

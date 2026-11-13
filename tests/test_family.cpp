@@ -188,7 +188,7 @@ void run_family_tests() {
     Family card_family = makeDasFamily();
     card_family.setCampId(3);
 
-    // [Class to class conversion] implicit, on assignment to a RationCard.
+    // Implicit, on assignment to a RationCard.
     RationCard card = card_family;
     ASSERT_EQ(card.getFamilyId(), card_family.getId());
     ASSERT_STR_EQ(card.getHeadName(), "Bipul Das");

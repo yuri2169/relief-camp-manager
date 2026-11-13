@@ -18,7 +18,6 @@ class HealthMonitor;
 // its whole shelter list, and adding one purely for the report would widen
 // Camp's interface for every other caller too.
 //
-// [Constant objects]
 // Every parameter is a const reference: generating a report must never change
 // what it reports on.
 class ReportGenerator {

@@ -97,7 +97,7 @@ void run_distribution_tests() {
 
     // Allocation::operator== is "the same claim": family and date only.
     Allocation base(101, 1, day1, oneAdult);
-    // [Operator overloading in use] the rule lives in Allocation::operator==
+    // The rule lives in Allocation::operator==
     ASSERT_TRUE(base == Allocation(101, 2, day1, oneAdult * 7.0));  // camp, amount differ
     ASSERT_FALSE(base == Allocation(102, 1, day1, oneAdult));       // other family
     ASSERT_FALSE(base == Allocation(101, 1, day2, oneAdult));       // other date

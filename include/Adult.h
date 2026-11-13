@@ -3,10 +3,10 @@
 
 #include "Resident.h"
 
-// [Single inheritance] A camp resident aged 13-59, drawing the full adult
+// A camp resident aged 13-59, drawing the full adult
 // ration. Pregnancy and lactation add to it.
-// [Hierarchical inheritance] Infant, Child and Adult all derive from Resident.
-// Adult is also the base of Elderly [multilevel] and of ResidentVolunteer [multiple].
+// Infant, Child and Adult all derive from Resident.
+// Adult is also the base of Elderly and of ResidentVolunteer.
 class Adult : public Resident {
 public:
     Adult();
@@ -14,7 +14,7 @@ public:
     Adult(const Adult& other);
     ~Adult() override;
 
-    // [Overriding a pure virtual] still virtual, so Elderly can override again
+    // Still virtual, so Elderly can override again
     virtual Ration rationNeed() const override;
     virtual int vulnerabilityScore() const override;
     virtual std::string describe() const override;

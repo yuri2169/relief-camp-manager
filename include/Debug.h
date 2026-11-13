@@ -4,7 +4,6 @@
 #include <iostream>
 
 // Build with `make debug` (-DRELIEF_DEBUG) to watch the object lifecycle.
-// [Object lifecycle tracing]
 #ifdef RELIEF_DEBUG
 #define RELIEF_LIFECYCLE(msg) std::cout << "[lifecycle] " << msg << std::endl
 #else

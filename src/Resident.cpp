@@ -6,7 +6,7 @@ Resident::Resident()
     RELIEF_LIFECYCLE("Resident created #" << getId());
 }
 
-// The Person(...) call here is used only when Resident is the most-derived class. For a ResidentVolunteer it is ignored, because a virtual base is initialised by the most-derived constructor. [Virtual base initialisation]
+// The Person(...) call here is used only when Resident is the most-derived class. For a ResidentVolunteer it is ignored, because a virtual base is initialised by the most-derived constructor.
 Resident::Resident(const std::string& name, int age, char sex, int familyId, int campId)
     : Person(name, age, sex), familyId(familyId), campId(campId), shelterLabel("") {
     RELIEF_LIFECYCLE("Resident created #" << getId());

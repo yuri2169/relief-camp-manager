@@ -14,7 +14,7 @@ class Stock {
     double qty[ITEM_COUNT];
     Ration dailyDemand;
 public:
-    // [Static data member] the answer when nothing is being consumed
+    // The answer when nothing is being consumed
     static const double kUnlimitedDays;
 
     Stock();
@@ -33,16 +33,15 @@ public:
     double daysOfSupply() const;               // the worst item decides
     Item mostCriticalItem() const;
 
-    // [Class to basic type conversion] `double d = stock;` gives the days of
+    // `double d = stock;` gives the days of
     // supply. A daysOfSupply(demand) method would be a cleaner design; the
     // demand is stored above so that the no-argument conversion can work.
     operator double() const;
 
     double operator[](Item it) const;
     Stock& operator+=(const Stock& other);
-    Stock& operator-=(const Allocation& a);    // [Object as argument]
+    Stock& operator-=(const Allocation& a);
 
-    // [Friend binary operators]
     friend Stock operator+(const Stock& a, const Stock& b);
     friend Stock operator-(const Stock& s, const Allocation& a);
     friend std::ostream& operator<<(std::ostream& os, const Stock& s);

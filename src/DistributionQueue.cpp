@@ -3,7 +3,7 @@
 
 DistributionQueue::DistributionQueue() {}
 
-// [Operator overloading in use] `*b < *a` means "a outranks b", because
+// `*b < *a` means "a outranks b", because
 // Family::operator< compares vulnerability scores and we want the HIGHER
 // score at the top of the heap.
 bool DistributionQueue::higherPriority(const Family* a, const Family* b) const {

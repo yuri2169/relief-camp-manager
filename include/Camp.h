@@ -13,7 +13,7 @@ class ReportGenerator;   // declared a friend below
 // embankment, with a capacity, a set of shelters and its own stock.
 class Camp {
 public:
-    // [Nested class] A shelter has no meaning outside the camp that contains
+    // A shelter has no meaning outside the camp that contains
     // it, so its name lives inside Camp: `Camp::Shelter`.
     class Shelter {
         std::string label;
@@ -34,7 +34,7 @@ public:
     };
 
 private:
-    static int nextId;                  // [Static data member]
+    static int nextId;
 
     int id;
     std::string name;
@@ -54,7 +54,7 @@ public:
     Camp(const Camp& other);
     ~Camp();
 
-    static int generateId();            // [Static member function]
+    static int generateId();
     static void resetIdCounter(int startAt);
     void adoptId(int existingId);
 
@@ -67,11 +67,11 @@ public:
     bool isOverflowing() const;         // true once the camp is full or beyond
     double occupancyRate() const;
 
-    // [Objects as arguments] the camp is told about a whole family at once
+    // The camp is told about a whole family at once
     void admit(const Family& f);        // throws OverCapacityException
     void release(const Family& f);
 
-    // [Unary operators] one more, or one fewer, person in the camp
+    // One more, or one fewer, person in the camp
     Camp& operator++();                 // prefix: ++camp
     Camp operator++(int);               // postfix: camp++
     Camp& operator--();                 // prefix
@@ -90,7 +90,7 @@ public:
     void setOccupancy(int people);      // CSV loading
     void setName(const std::string& newName);
 
-    // [Friend class] ReportGenerator reads the camp's private members
+    // ReportGenerator reads the camp's private members
     // (shelters, occupancy, stock) directly instead of going through the
     // public accessors, and `friend` is what permits that.
     friend class ReportGenerator;

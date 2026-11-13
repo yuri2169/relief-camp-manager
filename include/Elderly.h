@@ -5,7 +5,6 @@
 
 // A resident aged 60 or over: less rice, more ORS and oil, and a much higher
 // vulnerability score, because the elderly are prioritised in a flood camp.
-// [Multilevel inheritance]
 // Elderly -> Adult -> Resident -> Person, four levels.
 class Elderly : public Adult {
 public:

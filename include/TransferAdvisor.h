@@ -57,7 +57,6 @@ public:
 
     std::vector<Item> criticalItems(const Camp& camp) const;
 
-    // [Objects as arguments] [Returning objects]
     std::vector<TransferSuggestion> suggest(const std::vector<Camp*>& camps) const;
 };
 

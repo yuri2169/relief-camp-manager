@@ -7,7 +7,7 @@ Volunteer::Volunteer()
     RELIEF_LIFECYCLE("Volunteer created #" << getId());
 }
 
-// The Person(...) call here is used only when Volunteer is the most-derived class. For a ResidentVolunteer it is ignored, because a virtual base is initialised by the most-derived constructor. [Virtual base initialisation]
+// The Person(...) call here is used only when Volunteer is the most-derived class. For a ResidentVolunteer it is ignored, because a virtual base is initialised by the most-derived constructor.
 Volunteer::Volunteer(const std::string& name, int age, char sex,
                      const std::string& skill, const std::string& shift,
                      const std::string& organisation)

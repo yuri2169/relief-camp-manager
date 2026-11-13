@@ -425,7 +425,7 @@ void ConsoleApp::handleAdmitFamily() {
         if (shelterIndex >= 0) std::cout << ", shelter " << label;
         std::cout << ". Camp now " << camp->getOccupancy() << "/" << camp->getCapacity() << ".\n";
     }
-    // [Exception handling] a full camp is expected, so it is handled here where
+    // A full camp is expected, so it is handled here where
     // the alternative camps can be offered.
     catch (const OverCapacityException& e) {
         std::cout << "\n  REFUSED: " << e.what() << "\n";
@@ -652,7 +652,7 @@ void ConsoleApp::handleSetDate() {
 void ConsoleApp::run() {
     running = true;
     showBanner();
-    // [Multithreading] start autosaving every kAutosaveSeconds, sharing dataMutex
+    // Start autosaving every kAutosaveSeconds, sharing dataMutex
     autosaver.start(kAutosaveSeconds, dataMutex, [this]() {
         // Runs on the worker thread with dataMutex already held by the saver.
         try {
@@ -689,7 +689,7 @@ void ConsoleApp::run() {
                 default: std::cout << "No such option.\n";
             }
         }
-        // [Exception handling] every error path in the program ends here.
+        // Every error path in the program ends here.
         // Catch the precise types first, because each one can offer a
         // different recovery.
         catch (const OverCapacityException& e) {

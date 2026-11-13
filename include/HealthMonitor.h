@@ -31,7 +31,7 @@ public:
 // afternoon is not an outbreak, and three quiet days in a row should clear the
 // alarm by themselves.
 class HealthMonitor {
-    // [Static data members] these are the camp's norms, not one monitor's settings
+    // These are the camp's norms, not one monitor's settings
     static const int kWindowDays;
     static const int kDiarrhoeaThreshold;
     static const int kFeverThreshold;
@@ -49,7 +49,6 @@ public:
     bool outbreakAlert(int campId, const Date& today, Symptom symptom) const;
     std::vector<Symptom> activeAlerts(int campId, const Date& today) const;
 
-    // [Static member functions]
     static int thresholdFor(Symptom symptom);
     static int windowDays();
 

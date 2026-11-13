@@ -8,7 +8,7 @@ class Ration;   // forward declaration keeps the include graph acyclic
 // The relief ration norms, in one place. Every quantity in the system traces
 // back to this table.
 class RationNorms {
-    // [Static data members] shared by every object, defined once in the .cpp
+    // Shared by every object, defined once in the .cpp
     static const double adultDaily[ITEM_COUNT];
     static const double childDaily[ITEM_COUNT];
     static const double infantDaily[ITEM_COUNT];
@@ -17,7 +17,7 @@ class RationNorms {
     static const double pregnancyRice;
     static const double lactationOil;
 public:
-    // [Static member functions] no object needed to read a norm
+    // No object needed to read a norm
     static Ration forAdult();
     static Ration forChild();
     static Ration forInfant();

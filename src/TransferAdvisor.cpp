@@ -75,7 +75,6 @@ std::vector<Item> TransferAdvisor::criticalItems(const Camp& camp) const {
     return result;
 }
 
-// [Objects as arguments] [Returning objects]
 std::vector<TransferSuggestion> TransferAdvisor::suggest(const std::vector<Camp*>& camps) const {
     std::vector<TransferSuggestion> result;
 

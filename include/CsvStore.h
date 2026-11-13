@@ -40,7 +40,7 @@
 // Saving writes every file to "<name>.tmp" and renames them into place only
 // when all nine were written, so a failed save leaves the old files intact.
 //
-// [File handling] One file per kind of record, each with a header row.
+// One file per kind of record, each with a header row.
 class CsvStore {
     std::string dir;
 
@@ -91,7 +91,7 @@ public:
                  StockLedger& ledger,
                  HealthMonitor& health) const;
 
-    // [Runtime polymorphism from data] turns a type tag back into the right
+    // Turns a type tag back into the right
     // concrete Person. This is the one place that knows every subclass, so
     // adding a person type means touching exactly one switch.
     // A camp's daily demand is derived, not stored: the sum of its families'

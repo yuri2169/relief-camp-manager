@@ -1,7 +1,7 @@
 #include "Person.h"
 #include "Debug.h"
 
-// [Static data members] definitions live in exactly one .cpp file
+// Definitions live in exactly one .cpp file
 int Person::nextId = 1;
 int Person::liveCount = 0;
 

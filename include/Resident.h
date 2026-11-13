@@ -4,10 +4,10 @@
 #include "Person.h"
 #include <string>
 
-// A displaced person living in a camp. Still [abstract]: a resident's ration
+// A displaced person living in a camp. Still: a resident's ration
 // depends on their age band, which the subclasses below supply.
 //
-// [Virtual base class] `virtual public Person` means a ResidentVolunteer, which
+// `virtual public Person` means a ResidentVolunteer, which
 // inherits from both this branch and Volunteer, carries exactly ONE Person
 // subobject. Without `virtual` it would have two IDs and two sets of
 // vulnerability flags, and describe() would be ambiguous.

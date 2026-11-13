@@ -47,7 +47,7 @@ ReportGenerator::ReportGenerator() {}
 std::string ReportGenerator::stockTable(const Camp& camp) const {
     std::ostringstream out;
     out << std::fixed << std::setprecision(1);
-    // [Friend class in use] camp.stock is a PRIVATE member of Camp.
+    // Camp.stock is a PRIVATE member of Camp.
     for (int i = 0; i < ITEM_COUNT; i++) {
         Item item = itemAt(i);
         double days = camp.stock.daysOfSupplyFor(item);
@@ -97,7 +97,7 @@ std::string ReportGenerator::dailyReport(const Camp& camp, const Date& date,
     out << "=====================================================\n";
     out << " DAILY CAMP REPORT   " << date << "\n";
     out << "=====================================================\n";
-    // [Friend class in use] camp.id, camp.name, camp.district, camp.occupancy,
+    // Camp.id, camp.name, camp.district, camp.occupancy,
     // camp.capacity and camp.shelters are PRIVATE members of Camp. Only a
     // friend can read them.
     out << " Camp      : #" << camp.id << "  " << camp.name << "\n";

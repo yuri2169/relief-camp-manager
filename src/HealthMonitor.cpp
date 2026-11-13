@@ -40,7 +40,7 @@ int HealthMonitor::casesInWindow(int campId, const Date& today, Symptom symptom)
         if (c.getCampId() != campId || c.getSymptom() != symptom) continue;
         // Window is [today - 2, today]: age 0, 1 or 2 days. A future-dated
         // case has a negative age and is not counted toward today's window.
-        // [Operator overloading in use] Date::operator- gives the age in days
+        // Date::operator- gives the age in days
         long age = today - c.getDate();
         if (age >= 0 && age < kWindowDays) total += c.getCount();
     }

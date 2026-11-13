@@ -132,7 +132,7 @@ void run_hierarchy_tests() {
 
     Person::resetIdCounter(1);
 
-    // [Multilevel inheritance] Elderly -> Adult -> Resident -> Person
+    // Elderly -> Adult -> Resident -> Person
     Elderly grandma("Minoti Devi", 72, 'F', 101, 1);
     ASSERT_STR_EQ(grandma.typeTag(), "ELDERLY");
     ASSERT_NEAR(grandma.rationNeed().get(Item::Rice), 0.300, 1e-9);
@@ -154,14 +154,14 @@ void run_hierarchy_tests() {
     ASSERT_STR_EQ(grandmaCopy.getName(), "Minoti Devi");
     ASSERT_EQ(grandmaCopy.getFamilyId(), 101);
 
-    // [Multiple inheritance] [Hybrid inheritance] a resident who also volunteers
+    // A resident who also volunteers
     ResidentVolunteer helper("Gautam Pegu", 31, 'M', 103, 1, "Record keeper", "Evening");
     ASSERT_STR_EQ(helper.typeTag(), "RESIDENT_VOLUNTEER");
     ASSERT_EQ(helper.getFamilyId(), 103);
     ASSERT_STR_EQ(helper.getSkill(), "Record keeper");
     ASSERT_STR_EQ(helper.getShift(), "Evening");
 
-    // [Virtual base class] exactly ONE Person subobject. Reaching Person
+    // Exactly ONE Person subobject. Reaching Person
     // through each parent must give the same object, the same ID, the same name.
     Resident* viaResident = &helper;
     Volunteer* viaVolunteer = &helper;

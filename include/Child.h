@@ -3,9 +3,9 @@
 
 #include "Resident.h"
 
-// [Single inheritance] A camp resident aged 3-12. Children draw a reduced
+// A camp resident aged 3-12. Children draw a reduced
 // ration compared with adults.
-// [Hierarchical inheritance] Infant, Child and Adult all derive from Resident.
+// Infant, Child and Adult all derive from Resident.
 class Child : public Resident {
 public:
     Child();
@@ -13,7 +13,6 @@ public:
     Child(const Child& other);
     ~Child() override;
 
-    // [Overriding a pure virtual]
     Ration rationNeed() const override;
     int vulnerabilityScore() const override;
     std::string describe() const override;

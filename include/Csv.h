@@ -9,7 +9,7 @@
 //
 // These files get opened in a spreadsheet and hand-edited by camp staff, so a
 // bad field has to name its file and line rather than silently becoming a zero.
-// [Static member functions] no Csv object is ever needed: every helper is a
+// No Csv object is ever needed: every helper is a
 // static function of the class.
 class Csv {
 public:

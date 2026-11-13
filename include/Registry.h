@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 
-// [Class template] One store for every kind of entity that has an ID. Camps,
+// One store for every kind of entity that has an ID. Camps,
 // families and volunteers all need store / find / remove, so the code is
 // written once and the compiler stamps out a version per type.
 //
@@ -33,7 +33,7 @@ public:
         return raw;
     }
 
-    // [Const member function] finding does not change the registry
+    // Finding does not change the registry
     T* findById(int id) const {
         for (int i = 0; i < static_cast<int>(items.size()); i++) {
             if (items[i]->getId() == id) {

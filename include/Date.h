@@ -16,26 +16,25 @@ public:
     Date(const Date& other); Date& operator=(const Date&) = default;   // copy constructor (+ assignment, for GCC -Wdeprecated-copy)
     ~Date();
 
-    // [Const member functions]
     int getYear() const;
     int getMonth() const;
     int getDay() const;
     bool isValid() const;
     std::string toString() const;          // "YYYY-MM-DD"
     long toDayNumber() const;              // days since 1970-01-01
-    Date plusDays(int n) const;            // [Returning objects]
+    Date plusDays(int n) const;
 
     static Date parse(const std::string& text);   // throws std::invalid_argument
     static Date fromDayNumber(long dayNumber);
     static bool isLeapYear(int year);
     static int daysInMonth(int year, int month);
 
-    // [Friend functions] free-standing operators
+    // Free-standing operators
     friend bool operator==(const Date& a, const Date& b);
     friend bool operator!=(const Date& a, const Date& b);
     friend bool operator<(const Date& a, const Date& b);
     friend bool operator<=(const Date& a, const Date& b);
-    friend long operator-(const Date& a, const Date& b);   // [Binary operator] days between
+    friend long operator-(const Date& a, const Date& b);  // Days between
     friend std::ostream& operator<<(std::ostream& os, const Date& d);
 };
 
