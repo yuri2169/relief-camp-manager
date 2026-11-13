@@ -34,9 +34,8 @@ public:
     Item mostCriticalItem() const;
 
     // [Class to basic type conversion] `double d = stock;` gives the days of
-    // supply. A daysOfSupply(demand) method would be a cleaner design, but the
-    // conversion is what the syllabus asks to see, so the demand is stored
-    // above to make the no-argument form possible.
+    // supply. A daysOfSupply(demand) method would be a cleaner design; the
+    // demand is stored above so that the no-argument conversion can work.
     operator double() const;
 
     double operator[](Item it) const;

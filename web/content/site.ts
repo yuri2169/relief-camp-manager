@@ -84,7 +84,7 @@ export const site = {
   },
   footer: {
     note:
-      "The program itself is a C++17 console application that runs offline. This site is a web view of the same dataset, and every figure on it is computed from the program's committed seed files. Built for Object Oriented Programming (CS 203) and entered in the Seva First Innovation Challenge 2026, category REG-009-OP.",
+      "The program itself is a C++17 console application that runs offline. This site is a web view of the same dataset, and every figure on it is computed from the program's committed seed files. Entered in the Seva First Innovation Challenge 2026, Theme 2, category REG-009-OP: Safety and Disaster Management.",
   },
   notFound: {
     figure: "404",
