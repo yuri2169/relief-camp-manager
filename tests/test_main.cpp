@@ -1,0 +1,46 @@
+#include "TestRunner.h"
+#include <sstream>
+
+void run_runner_selftest();
+void run_date_tests();
+void run_ration_tests();
+void run_person_tests();
+void run_hierarchy_tests();
+void run_family_tests();
+void run_registry_tests();
+void run_exception_tests();
+void run_stock_tests();
+void run_camp_tests();
+void run_distribution_tests();
+void run_queue_tests();
+void run_ledger_tests();
+void run_transfer_tests();
+void run_health_tests();
+void run_report_tests();
+void run_csv_tests();
+void run_autosave_tests();
+void run_seed_tests();
+
+int main() {
+    std::cout << "Relief Camp Manager - test suite\n";
+    run_runner_selftest();
+    run_date_tests();
+    run_ration_tests();
+    run_person_tests();
+    run_hierarchy_tests();
+    run_family_tests();
+    run_registry_tests();
+    run_exception_tests();
+    run_stock_tests();
+    run_camp_tests();
+    run_distribution_tests();
+    run_queue_tests();
+    run_ledger_tests();
+    run_transfer_tests();
+    run_health_tests();
+    run_report_tests();
+    run_csv_tests();
+    run_autosave_tests();
+    run_seed_tests();
+    return testing::summary();
+}
